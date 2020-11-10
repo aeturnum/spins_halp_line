@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "spins_halp_line"
+version = "0.1.0"
+description = ""
+authors = ["Daniel Drexler <aeturnum@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+asks = "^2.4.12"
+Quart-Trio = "^0.6.0"
+twilio = "^6.47.0"
+trio-asyncio = "^0.11.0"
+greenletio = "^0.0.7"
+pydub = "^0.24.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
