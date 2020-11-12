@@ -1,4 +1,8 @@
 import subprocess
+from logging import (
+    DEBUG,
+    getLogger
+)
 
 from hypercorn.config import Config
 from hypercorn.trio import serve
@@ -14,8 +18,6 @@ app = QuartTrio(__name__)
 config = Config.from_toml("./hypercorn.toml")
 add_task, get_task = trio.open_memory_channel(50)
 
-# hash = subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True)
-# hash = hash.stdout.decode()
 message = subprocess.run(['git', 'log', '-1', '--pretty=%B'], capture_output=True)
 message = message.stdout.decode()
 
@@ -23,6 +25,7 @@ message = message.stdout.decode()
 @app.route('/')
 async def hello():
     # server is up
+    print("root")
     return message
 
 #  _______       _ _ _         ______           _             _       _
