@@ -21,11 +21,27 @@ add_task, get_task = trio.open_memory_channel(50)
 message = subprocess.run(['git', 'log', '-1', '--pretty=%B'], capture_output=True)
 message = message.stdout.decode()
 
+async def pretty_print_request(r, label = ""):
+    s = []
+    if label:
+        s.append(f"{label}:")
+    s.append(f"{r.method} {r.url}")
+    s.append("Headers:")
+    for header, value in r.headers.items():
+        s.append(f'  {header}: {value}')
+
+    if r.args:
+        s.append("Args:")
+        for arg, value in r.args.items():
+            s.append(f'{arg}: {value}')
+    body = await r.get_data()
+    if body:
+        s.append("Body: " + str(body))
+    print("\n".join(s))
 
 @app.route('/')
 async def hello():
     # server is up
-    print("root")
     return message
 
 #  _______       _ _ _         ______           _             _       _
@@ -46,7 +62,7 @@ def twil(response):
 
 @app.route("/tipline/start", methods=['GET', 'POST'])
 async def main_number():
-    print(f"Got call on main number: {request}")
+    await pretty_print_request(request, "/tipline/start")
     response = VoiceResponse()
     with response.gather( num_digits=1, action=url_for('game_tips'), method="POST") as g:
         g.say(message="This is doctor spins tip line!" +
@@ -56,6 +72,7 @@ async def main_number():
 
 @app.route('/tipline/tip', methods=['POST'])
 async def game_tips():
+    await pretty_print_request(request, "/tipline/tip")
     response = VoiceResponse()
 
     form = await request.form
