@@ -23,6 +23,8 @@ message = message.stdout.decode()
 
 async def pretty_print_request(r, label = ""):
     s = []
+    content_type = r.headers.get("Content-Type", None)
+
     if label:
         s.append(f"{label}:")
     s.append(f"{r.method} {r.url}")
@@ -34,14 +36,25 @@ async def pretty_print_request(r, label = ""):
         s.append("Args:")
         for arg, value in r.args.items():
             s.append(f'{arg}: {value}')
-    body = await r.get_data()
-    if body:
-        s.append("Body: " + str(body))
+
+    if content_type:
+        if 'x-www-form-urlencoded' in content_type:
+            form = await r.form
+            s.append("Form:")
+            for arg, value in form.items():
+                s.append(f'{arg}: {value}')
+        if 'json' in content_type:
+            json = await r.get_json()
+            s.append("JSON:")
+            for arg, value in json.items():
+                s.append(f'{arg}: {value}')
+
     print("\n".join(s))
 
 @app.route('/')
 async def hello():
     # server is up
+    await pretty_print_request(request)
     return message
 
 #  _______       _ _ _         ______           _             _       _
