@@ -43,6 +43,7 @@ def twil(response):
 
 @app.route("/tipline/start", methods=['GET', 'POST'])
 async def main_number():
+    print(f"Got call on main number: {request}")
     response = VoiceResponse()
     with response.gather( num_digits=1, action=url_for('game_tips'), method="POST") as g:
         g.say(message="This is doctor spins tip line!" +
