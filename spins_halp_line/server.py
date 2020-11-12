@@ -57,7 +57,7 @@ async def game_tips():
     form = await request.form
     tip = form['Digits']
     response.say(f"You chose option {tip}")
-    return response
+    return twil(response)
 
 #   _____ _ _     ______           _             _       _
 #  / ____(_) |   |  ____|         | |           (_)     | |
