@@ -1,12 +1,12 @@
 from hypercorn.config import Config
 from hypercorn.trio import serve
 from quart_trio import QuartTrio
-from quart import request
+from quart import request, Response, url_for
 import trio_asyncio
 import trio
 from functools import partial
 
-from twilio.twiml.voice_response import VoiceResponse
+from twilio.twiml.voice_response import VoiceResponse, Gather
 
 app = QuartTrio(__name__)
 config = Config.from_toml("./hypercorn.toml")
@@ -14,7 +14,51 @@ add_task, get_task = trio.open_memory_channel(50)
 
 @app.route('/')
 async def hello():
+    # server is up
     return 'hello'
+
+#  _______       _ _ _         ______           _             _       _
+# |__   __|     (_) (_)       |  ____|         | |           (_)     | |
+#    | |_      ___| |_  ___   | |__   _ __   __| |_ __   ___  _ _ __ | |_ ___
+#    | \ \ /\ / / | | |/ _ \  |  __| | '_ \ / _` | '_ \ / _ \| | '_ \| __/ __|
+#    | |\ V  V /| | | | (_) | | |____| | | | (_| | |_) | (_) | | | | | |_\__ \
+#    |_| \_/\_/ |_|_|_|\___/  |______|_| |_|\__,_| .__/ \___/|_|_| |_|\__|___/
+#                                                | |
+#                                                |_|
+
+# much thanks to https://github.com/TwilioDevEd/ivr-phone-tree-python/blob/master/ivr_phone_tree_python/views.py
+
+def twil(response):
+    resp = Response(str(response))
+    resp.headers['Content-Type'] = 'text/xml'
+    return resp
+
+@app.route("/tipline/start", methods=['GET', 'POST'])
+async def main_number():
+    response = VoiceResponse()
+    with response.gather( num_digits=1, action=url_for('tip'), method="POST") as g:
+        g.say(message="This is doctor spins tip line!" +
+                      "Please press 1 to do one thing" +
+                      "Or press 2 to do another!.", loop=3)
+    return twil(response)
+
+@app.route('/tipline/tip', methods=['POST'])
+def menu():
+    response = VoiceResponse()
+
+    tip = request.form['Digits']
+    response.say(f"You chose option {tip}")
+    return response
+
+#   _____ _ _     ______           _             _       _
+#  / ____(_) |   |  ____|         | |           (_)     | |
+# | |  __ _| |_  | |__   _ __   __| |_ __   ___  _ _ __ | |_ ___
+# | | |_ | | __| |  __| | '_ \ / _` | '_ \ / _ \| | '_ \| __/ __|
+# | |__| | | |_  | |____| | | | (_| | |_) | (_) | | | | | |_\__ \
+#  \_____|_|\__| |______|_| |_|\__,_| .__/ \___/|_|_| |_|\__|___/
+#                                   | |
+#                                   |_|
+#
 
 # https://support.glitch.com/t/tutorial-how-to-auto-update-your-project-with-github/8124
 @app.route("/git", methods=['POST'])
@@ -24,15 +68,13 @@ async def pull_git():
         await add_task.send({"task": "pull"})
     return ""
 
-@app.route("/main", methods=['GET', 'POST'])
-async def main_number():
-    resp = VoiceResponse()
 
-    # Read a message aloud to the caller
-    resp.say("hello world!", voice='alice')
-
-    return str(resp)
-
+#   _____                            ____        _ _            _
+#  / ____|                          |  _ \      | | |          | |
+# | (___   ___ _ ____   _____ _ __  | |_) | ___ | | | ___   ___| | _____
+#  \___ \ / _ \ '__\ \ / / _ \ '__| |  _ < / _ \| | |/ _ \ / __| |/ / __|
+#  ____) |  __/ |   \ V /  __/ |    | |_) | (_) | | | (_) | (__|   <\__ \
+# |_____/ \___|_|    \_/ \___|_|    |____/ \___/|_|_|\___/ \___|_|\_\___/
 
 async def work_queue():
     async for task in get_task:
