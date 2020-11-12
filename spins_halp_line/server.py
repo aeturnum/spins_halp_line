@@ -51,10 +51,11 @@ async def main_number():
     return twil(response)
 
 @app.route('/tipline/tip', methods=['POST'])
-def game_tips():
+async def game_tips():
     response = VoiceResponse()
 
-    tip = request.form['Digits']
+    form = await request.form
+    tip = form['Digits']
     response.say(f"You chose option {tip}")
     return response
 
