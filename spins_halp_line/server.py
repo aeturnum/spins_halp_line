@@ -11,7 +11,7 @@ from functools import partial
 from twilio.twiml.voice_response import VoiceResponse, Gather
 
 from spins_halp_line.tasks import work_queue, GitUpdate
-from spins_halp_line.twilio import t_resp, TwilRequest
+from spins_halp_line.twil import t_resp, TwilRequest
 from spins_halp_line.util import do_monkey_patches, pretty_print_request
 
 do_monkey_patches()
