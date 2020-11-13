@@ -1,9 +1,8 @@
 import subprocess
-from logging import (
-    DEBUG,
-    getLogger
-)
+import logging
+from typing import Union, Optional, IO
 
+import hypercorn.logging as hyplog
 from hypercorn.config import Config
 from hypercorn.trio import serve
 from quart_trio import QuartTrio
@@ -13,6 +12,42 @@ import trio
 from functools import partial
 
 from twilio.twiml.voice_response import VoiceResponse, Gather
+
+from spins_halp_line.tasks import work_queue, GitUpdate
+
+
+# modified version of create logger
+def our_create_logger(
+    name: str,
+    target: Union[logging.Logger, str, None],
+    level: Optional[str],
+    sys_default: IO,
+    *,
+    propagate: bool = True,
+) -> Optional[logging.Logger]:
+    if isinstance(target, logging.Logger):
+        return target
+
+    if target:
+        logger = logging.getLogger(name)
+        logger.handlers = [
+            logging.StreamHandler(sys_default) if target == "-" else logging.FileHandler(target)
+        ]
+        logger.propagate = propagate
+        formatter = logging.Formatter(
+            "[%(levelname)s] %(message)s",
+            "",
+        )
+        logger.handlers[0].setFormatter(formatter)
+        if level is not None:
+            logger.setLevel(logging.getLevelName(level.upper()))
+        return logger
+    else:
+        return None
+
+# who needs config options with python
+hyplog._create_logger = our_create_logger
+
 
 app = QuartTrio(__name__)
 config = Config.from_toml("./hypercorn.toml")
@@ -54,7 +89,6 @@ async def pretty_print_request(r, label = ""):
 @app.route('/')
 async def hello():
     # server is up
-    await pretty_print_request(request)
     return message
 
 #  _______       _ _ _         ______           _             _       _
@@ -108,7 +142,7 @@ async def game_tips():
 async def pull_git():
     if request.headers['x-github-event'] == "push":
         print("Git repo updateing, pulling changes")
-        await add_task.send({"task": "pull"})
+        await add_task.send(GitUpdate())
     return ""
 
 
@@ -119,24 +153,12 @@ async def pull_git():
 #  ____) |  __/ |   \ V /  __/ |    | |_) | (_) | | | (_) | (__|   <\__ \
 # |_____/ \___|_|    \_/ \___|_|    |____/ \___/|_|_|\___/ \___|_|\_\___/
 
-async def work_queue():
-    async for task in get_task:
-        print(f"got task: {task}")
-        try:
-            if task['task'] =='pull':
-                result = await trio.run_process("./pull_git.sh", shell=True)
-                print(result)
-        except Exception as e:
-            print(f"Task got exception: {e}")
-            pass
-
-
 async def async_layer():
     async with trio_asyncio.open_loop() as loop:
         async with trio.open_nursery() as nurse:
             # start our own
             nurse.start_soon(partial(serve, app, config))
-            nurse.start_soon(work_queue)
+            nurse.start_soon(work_queue, get_task)
             # nurse.start_soon(QuartTrio.run_task, *[app, "127.0.0.1", 5000, True])
 
 trio_asyncio.run(async_layer)

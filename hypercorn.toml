@@ -1,5 +1,6 @@
 bind="0.0.0.0:8000"
 loglevel="DEBUG"
+access_log_format="%(h)s -- %(r)s | %(s)s %(b)s"
 accesslog="-"
 errorlog="-"
 use_reloader=true
