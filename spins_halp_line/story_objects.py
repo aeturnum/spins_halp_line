@@ -138,10 +138,16 @@ class Script(Logger):
     # return true if player is going t
     async def player_playing(self, request: TwilRequest):
         self.d(f"Checking {request}...")
+
+        playing = False
+
         await request.load()  # load player
         script_info: ScriptInfo = request.player.script(self.name)
         scene_set = self._get_scene_set(script_info, request.num_called)
-        playing = self._find_scene(script_info, scene_set) is not None
+        if scene_set:
+            scene = self._find_scene(script_info, scene_set)
+            playing = scene is not None
+
         self.d(f"{request} is playing?: {playing}")
         return playing
 
