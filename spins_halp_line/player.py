@@ -36,6 +36,15 @@ class SceneInfo:
     rooms_visited: List[str] = field(default_factory=list)
     data: Dict[Any, Any] = field(default_factory=dict)  # the only field exposed to Rooms
 
+    @staticmethod
+    def from_dict(d: dict):
+        return SceneInfo(
+            name=d.get('name'),
+            prev_room=d.get('prev_room', None),
+            rooms_visited=d.get('rooms_visited', []),
+            data=d.get('data', {})
+        )
+
     def __str__(self):
         return f'SceneInfo[{self.name}]{self.rooms_visited}]{self.prev_room}>'
 
@@ -52,6 +61,15 @@ class ScriptInfo:
             self.scene_states[name] = SceneInfo(name=name)
 
         return self.scene_states[name]
+
+    @staticmethod
+    def from_dict(d: dict):
+        return ScriptInfo(
+            state=d.get("state"),
+            scene_states={k: SceneInfo.from_dict(v) for k, v in d.get("scene_states", {}).items()},
+            scene_path=d.get('scene_path', []),
+            data=d.get('data', {})
+        )
 
     def __str__(self):
         return f'ScriptInfo[{self.state}]{self.scene_path}] -> {list(self.scene_states.keys())}'
@@ -75,19 +93,11 @@ class ScriptInfo:
 #     locations: Locations
 
 
-# https://gist.github.com/gatopeich/1efd3e1e4269e1e98fae9983bb914f22
-def dataclass_from_dict(klass, dikt):
-    try:
-        fieldtypes = {f.name: f.type for f in datafields(klass)}
-        return klass(**{f: dataclass_from_dict(fieldtypes[f], dikt[f]) for f in dikt})
-    except Exception:
-        return dikt
-
 
 class Player(object):
 
     _info = 'info'
-    _scripts = 'scripts'
+    scripts_key = 'scripts'
 
     def __init__(self, number):
         global _redis
@@ -106,20 +116,21 @@ class Player(object):
             jsn = "{}"
         self._data = json.loads(jsn)
         # self.info = self._load_info(self._data)
-        self.scripts = self._load_script(self._data)
+        self.scripts = self._load_scripts(self._data)
         self._loaded = True
+
+    @classmethod
+    def _load_scripts(cls, data: dict):
+        scripts = data.get(cls.scripts_key, {})
+        return {
+            script: ScriptInfo.from_dict(info) for script, info in scripts.items()
+        }
 
     # def _load_info(self, data):
     #     return dataclass_from_dict(
     #         PlayerInfo,
     #         data.get(self._info, {})
     #     )
-
-    # we need to do this because dataclasses won't nest by default
-    def _load_script(self, data):
-        return {
-            k: dataclass_from_dict(ScriptInfo, v) for k, v in data.get(self._scripts, {}).items()
-        }
 
     @property
     def _key(self):
@@ -139,7 +150,7 @@ class Player(object):
     def data(self):
         return {
             # 'info': asdict(self.info),
-            'scripts': {k: asdict(v) for k, v in self.scripts.items()}
+            self.scripts_key: {k: asdict(v) for k, v in self.scripts.items()}
         }
 
     def script(self, script_name: str) -> ScriptInfo:

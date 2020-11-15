@@ -1,5 +1,5 @@
 from spins_halp_line.story_objects import Script, Scene, Room, SceneSet
-from spins_halp_line.player import ScriptInfo
+from spins_halp_line.player import ScriptInfo, Player
 from spins_halp_line.constants import (
     Script_New_State,
     Script_Any_Number,
@@ -7,7 +7,7 @@ from spins_halp_line.constants import (
 )
 
 
-class MockPlayer:
+class MockPlayer(Player):
 
     def __init__(self):
         self.scripts = {}
@@ -92,7 +92,7 @@ async def test_two_rooms():
     expected2 = 202
 
     class TestScene(Scene):
-        Name = "TestTest Scene"
+        Name = "test_two_rooms Scene"
         Rooms = [RoomTest(expected1), RoomTest(expected2)]
 
     script_name = "testing"
@@ -116,3 +116,31 @@ async def test_two_rooms():
     result = await s.play(req)
     assert result == expected2
     assert player.scripts[script_name].state == Script_End_State
+
+async def test_state():
+
+    class TestScene(Scene):
+        Name = "test_state Scene"
+        Rooms = [RoomTest('')]
+
+    script_name = "testing"
+    caller = "+1234"
+    player = MockPlayer()
+
+    req = MockRequest.make(player, caller, "<anywhere>")
+
+    s = Script(
+        script_name,
+        {
+            Script_New_State: {
+                Script_Any_Number: SceneSet([TestScene()], Script_End_State)
+            }
+        }
+    )
+
+    # import pudb.b
+    await s.play(req)
+    player_data = player.data
+    print(f'player.scripts: {player.scripts}')
+    print(f'loaded: {player._load_scripts(player_data)}')
+    assert player._load_scripts(player_data) == player.scripts
