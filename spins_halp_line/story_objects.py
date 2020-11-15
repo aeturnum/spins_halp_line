@@ -153,12 +153,13 @@ class Script(Logger):
         self.d(f'play({request})')
 
         script_info: ScriptInfo = request.player.script(self.name)
+        self.d(f'play({request}) - {script_info}')
         if script_info.state == Script_End_State:
-            self.d(f'plat({request}): Found end state, resetting to start.')
+            self.d(f'play({request}): Found end state, resetting to start.')
             request.player.reset_script(self.name)
             script_info = request.player.script(self.name)
+            self.d(f'play({request}) - {script_info}')
 
-        self.d(f'play({request}) - {script_info}')
         scene_set = self._get_scene_set(script_info, request.num_called)
 
         scene = self._find_scene(script_info, scene_set)
