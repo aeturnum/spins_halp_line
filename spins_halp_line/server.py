@@ -48,7 +48,7 @@ async def main_number():
     response = None
 
     await req.load()
-    
+
     # players already in a game
     # todo: improve this system
     for script in Script.Active_Scripts:
@@ -70,13 +70,6 @@ async def main_number():
     await req.player.save()
 
     return t_resp(response)
-
-# @app.route('/tipline/tip', methods=['POST'])
-# async def game_tips():
-#     req = TwilRequest(request)
-#     response = VoiceResponse()
-#     response.say(f"You chose option {await req.digits}")
-#     return t_resp(response)
 
 #   _____ _ _     ______           _             _       _
 #  / ____(_) |   |  ____|         | |           (_)     | |

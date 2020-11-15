@@ -155,6 +155,9 @@ class Player(object):
 
     def script(self, script_name: str) -> ScriptInfo:
         if script_name not in self.scripts:
-            self.scripts[script_name] = ScriptInfo(Script_New_State)
+            self.reset_script(script_name)
 
         return self.scripts[script_name]
+
+    def reset_script(self, script_name: str) -> None:
+        self.scripts[script_name] = ScriptInfo(Script_New_State)

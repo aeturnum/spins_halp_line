@@ -1,5 +1,5 @@
 from quart import Response, Request
-
+from typing import Optional
 
 from spins_halp_line.player import Player
 
@@ -52,7 +52,7 @@ class TwilRequest(object):
         self.req = request
         self._loaded = False
         self._data = {}
-        self.player = None
+        self.player: Optional[Player] = None
 
     async def load(self):
         if not self._loaded:

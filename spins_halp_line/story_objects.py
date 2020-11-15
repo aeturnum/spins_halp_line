@@ -151,7 +151,13 @@ class Script(Logger):
 
     async def play(self, request: TwilRequest):
         self.d(f'play({request})')
+
         script_info: ScriptInfo = request.player.script(self.name)
+        if script_info.state == Script_End_State:
+            self.d(f'plat({request}): Found end state, resetting to start.')
+            request.player.reset_script(self.name)
+            script_info = request.player.script(self.name)
+
         self.d(f'play({request}) - {script_info}')
         scene_set = self._get_scene_set(script_info, request.num_called)
 
@@ -181,7 +187,7 @@ class Script(Logger):
     def _get_scene_set(self, info: ScriptInfo, number_called: str) -> Optional[SceneSet]:
         self.d(f'_get_scene_set(info, {number_called})')
         if info.state == Script_End_State:
-            self.d(f'_get_scene_set(info, {number_called}): Treating end state as start state for restart')
+
             # allow players to restart
             info.state = Script_New_State
 
