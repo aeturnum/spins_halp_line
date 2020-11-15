@@ -170,7 +170,7 @@ class Script(Logger):
 
         return result
 
-    def _find_scene(self, script_info, scene_set):
+    def _find_scene(self, script_info: ScriptInfo, scene_set: SceneSet):
         our_scene = None
         for scene in scene_set.scenes:
             if not scene.done(script_info):

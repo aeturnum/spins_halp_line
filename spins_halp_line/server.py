@@ -53,14 +53,14 @@ async def main_number():
     # players already in a game
     # todo: improve this system
     for script in Script.Active_Scripts:
-        if script.player_playing(req):
+        if await script.player_playing(req):
             response = await script.play(req)
             break
 
     # start a new game
     if not response:
         for script in Script.Active_Scripts:
-            if script.player_eligable(req):
+            if await script.player_eligable(req):
                 response = await script.play(req)
                 break
 
