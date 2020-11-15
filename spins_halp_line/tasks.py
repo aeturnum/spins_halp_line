@@ -1,8 +1,10 @@
 import trio
 
+
 class Task(object):
     async def execute(self):
         pass
+
 
 class GitUpdate(object):
     async def execute(self):

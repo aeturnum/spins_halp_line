@@ -1,6 +1,6 @@
 bind="0.0.0.0:8000"
 loglevel="DEBUG"
-access_log_format="%(s)s] %(r)s -> %(b)s (%(T)sms)"
+access_log_format="%(s)s] %(r)s -> %(b)sb[%(L)ss]"
 accesslog="-"
 errorlog="-"
 use_reloader=true

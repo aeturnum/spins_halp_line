@@ -3,6 +3,8 @@ from typing import Union, Optional, IO
 
 import hypercorn.logging as hyplog
 
+logging.basicConfig(level=logging.DEBUG)
+
 
 # modified version of create logger
 def our_create_logger(
@@ -33,11 +35,37 @@ def our_create_logger(
     else:
         return None
 
+
 def do_monkey_patches():
     # who needs config options with python
     hyplog._create_logger = our_create_logger
 
-async def pretty_print_request(r, label = ""):
+
+def get_logger():
+    return logging.getLogger("spins")
+
+
+class Logger(object):
+
+    def __init__(self):
+        super(Logger, self).__init__()
+        self._log = get_logger()
+
+    def e(self, line):
+        self._log.error(f'{self}: {line}', stacklevel=2)
+
+    def w(self, line):
+        self._log.warning(f'{self}: {line}', stacklevel=2)
+
+    def d(self, line):
+        # print(f'{self}: {line}')
+        self._log.debug(f'{self}: {line}', stacklevel=2)
+
+    def __str__(self):
+        return str(self.__class__)
+
+
+async def pretty_print_request(r, label=""):
     s = []
     content_type = r.headers.get("Content-Type", None)
 
