@@ -62,8 +62,8 @@ class TwilRequest(object):
                 elif 'json' in self.content_type:
                     self._data = await self.req.form
 
-            if await self.caller:
-                self.player = Player(await self.caller)
+            if self.caller:
+                self.player = Player(self.caller)
                 await self.player.load()
 
             self._loaded = True
