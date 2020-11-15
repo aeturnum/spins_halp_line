@@ -187,12 +187,7 @@ class Script(Logger):
 
     def _get_scene_set(self, info: ScriptInfo, number_called: str) -> Optional[SceneSet]:
         self.d(f'_get_scene_set(info, {number_called})')
-        if info.state == Script_End_State:
-
-            # allow players to restart
-            info.state = Script_New_State
-
-        current_structure = self.structure.get(info.state)
+        current_structure = self.structure.get(info.state, {})
 
         if number_called in current_structure:
             self.d(f'_get_scene_set(info, {number_called}): Specific number matched')

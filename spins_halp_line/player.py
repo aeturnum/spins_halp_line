@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, List
 
 import redio
 
+from spins_halp_line.util import Logger
 from spins_halp_line.constants import Script_New_State
 
 
@@ -94,12 +95,13 @@ class ScriptInfo:
 
 
 
-class Player(object):
+class Player(Logger):
 
     _info = 'info'
     scripts_key = 'scripts'
 
     def __init__(self, number):
+        super(Player, self).__init__()
         global _redis
         self._number = number
         self._db = _get_redis()
@@ -117,6 +119,7 @@ class Player(object):
         self._data = json.loads(jsn)
         # self.info = self._load_info(self._data)
         self.scripts = self._load_scripts(self._data)
+        self.d(f"loaded scripts: {self.scripts}")
         self._loaded = True
 
     @classmethod
@@ -161,3 +164,6 @@ class Player(object):
 
     def reset_script(self, script_name: str) -> None:
         self.scripts[script_name] = ScriptInfo(Script_New_State)
+
+    def __str__(self):
+        return f"Player[{self._number}]"
