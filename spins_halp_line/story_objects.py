@@ -228,7 +228,7 @@ class TestTip(Room):
     async def action(self, request: TwilRequest, script_state: ScriptInfo, scene_state: SceneInfo):
         self.d("")
         response = VoiceResponse()
-        response.say(f"You chose option {await request.digits}")
+        response.say(f"You chose option {request.digits}")
         return response
 
 

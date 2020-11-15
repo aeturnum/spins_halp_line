@@ -48,8 +48,7 @@ async def main_number():
     response = None
 
     await req.load()
-    log.debug(f'Got request:\n{req.str()}')
-
+    
     # players already in a game
     # todo: improve this system
     for script in Script.Active_Scripts:
