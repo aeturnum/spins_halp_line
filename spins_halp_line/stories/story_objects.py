@@ -53,8 +53,12 @@ class RoomContext(dict):
         self.state_is_new = room_state.fresh_state
         self._ended = scene_state.ended_early
 
-
-    def _pass_back_changes(self, script_state: ScriptInfo, scene_state: SceneInfo, room_state: RoomInfo):
+    def _pass_back_changes(
+            self,
+            script_state: ScriptInfo,
+            scene_state: SceneInfo,
+            room_state: RoomInfo,
+            spoil_state: bool = True):
         script_state.data = self.script
         scene_state.data = self.scene
 
@@ -63,13 +67,15 @@ class RoomContext(dict):
         # don't copy choices back
         # also don't copy state_is_new back
 
-        if self._start_state == self.state:
-            # no state change
-            room_state.fresh_state = False
-        else:
-            # state change!
-            room_state.state = self.state
-            room_state.fresh_state = True
+        # If spoil state is false, then we don't want to change the freshness yet
+        if spoil_state:
+            if self._start_state == self.state:
+                # no state change
+                room_state.fresh_state = False
+            else:
+                # state change!
+                room_state.state = self.state
+                room_state.fresh_state = True
 
         for k, v in self.items():
             room_state.data[k] = v
@@ -79,6 +85,11 @@ class RoomContext(dict):
     def end_scene(self):
         self._ended = True
 
+    def __str__(self):
+        fresh = "_"
+        if self.state_is_new:
+            fresh = "F"
+        return f"RoomCtx[{self.state}|{fresh}]"
 
 class Room(Logger):
     Name = "Base room"
@@ -122,6 +133,8 @@ class Scene(Logger):
 
     # todo: Think about how to perform actions on rooms (i.e. if a room routes back on itself, how
     # todo: do we note that?) Right now we use the digit to route but can't tell the room.
+
+    # todo: add a way for rooms to know about the digit that was just pressed
 
     def __init__(self):
         super(Scene, self).__init__()
@@ -203,7 +216,12 @@ class Scene(Logger):
 
         # post room updates
         # I am now paranoid about state not getting written and am done fucking around
-        script_state, scene_state, room_state = context._pass_back_changes(script_state, scene_state, room_state)
+        script_state, scene_state, room_state = context._pass_back_changes(
+            script_state,
+            scene_state,
+            room_state,
+            spoil_state=True # the room state stops being fresh now
+        )
 
         scene_state.rooms_visited.append(room.Name)
         self.d(f"play({request}): state.rooms_visited: {scene_state.rooms_visited}")

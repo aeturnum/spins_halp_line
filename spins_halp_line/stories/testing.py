@@ -1,7 +1,7 @@
 from twilio.twiml.voice_response import VoiceResponse
 
 
-from .story_objects import Room, Scene, Script, SceneAndState
+from .story_objects import Room, Scene, Script, SceneAndState, RoomContext
 from spins_halp_line.player import SceneInfo, ScriptInfo
 from spins_halp_line.twil import TwilRequest
 from spins_halp_line.constants import (
@@ -21,7 +21,7 @@ from spins_halp_line.constants import (
 class TestIntro(Room):
     Name = "Tip List"
 
-    async def action(self, request: TwilRequest, script_data: dict, scene_data: dict):
+    async def action(self, context: RoomContext):
         self.d("")
         response = VoiceResponse()
         with response.gather(num_digits=1, method="POST") as g:
@@ -35,10 +35,10 @@ class TestIntro(Room):
 class TestTip(Room):
     Name = "Tip Read Back"
 
-    async def action(self, request: TwilRequest, script_data: dict, scene_data: dict):
+    async def action(self, context: RoomContext):
         self.d("")
         response = VoiceResponse()
-        response.say(f"You chose option {request.digits}")
+        response.say(f"You chose option Unknown!")
         return response
 
 

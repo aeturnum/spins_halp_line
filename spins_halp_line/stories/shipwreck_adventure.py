@@ -26,9 +26,11 @@ class AdventureRoom(Room):
         return 2
 
     async def new_player_choice(self, choice: str, context: RoomContext):
+        self.d(f"new_player_choice({choice}) context: {context}")
         current_transitions = self.State_Transitions.get(context.state, {})
         if choice in current_transitions:
             context.state = current_transitions[choice]
+            self.d(f"new_player_choice({choice}) new state: {context.state}")
 
     async def description(self, context: RoomContext) -> str:
         pass
@@ -37,7 +39,7 @@ class AdventureRoom(Room):
         pass
 
     async def action(self, context: RoomContext):
-        self.d("")
+        self.d(f"action() context: {context}")
         response = VoiceResponse()
         with response.gather(num_digits=1, method="POST") as g:
             message = await self.description(context)
