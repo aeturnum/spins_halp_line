@@ -41,16 +41,18 @@ class AdventureRoom(Room):
     async def action(self, context: RoomContext):
         self.d(f"action() context: {context}")
         response = VoiceResponse()
-        with response.gather(num_digits=1, method="POST") as g:
+        with response.gather(num_digits=1, method="POST", action_on_empty_result=True) as g:
             message = await self.description(context)
             choices = await self.choices(context)
             if choices:
                 message += "\nWhat would you like to do?"
                 for number, text in choices.items():
                     message += f"\nPress {number} to {text}."
-            for _ in range(1, self.loop() + 1):
+            for loop in range(0, self.loop()):
                 g.say(message=message)
-                g.pause(length=2)
+                # don't pause the last time
+                if loop < self.loop() - 1:
+                    g.pause(length=2)
 
 
 
