@@ -96,23 +96,23 @@ class ShipwreckYardShip(AdventureRoom):
         if not context.state:
             text += (
             "You stand next to a sculpture of a ship. It's sprinkled in leaves and needles. "
-            "You can see that its walls are thinner than you thought at a distance."
-            "It doesn't look that comfortable but the design is striking." 
-            "You can now see a side door next to the construction area."
+            "You can see that its walls are thinner than you thought at a distance. "
+            "It doesn't look that comfortable but the design is striking. " 
+            "You can now see a side door next to the construction area. "
             )
         elif context.state == "Ship_Push":
             if context.state_is_new:
                 text += (
                     "You shove the ship. It's lighter than you thought and it tips over violently. "
-                    "The bow strikes the ground and shatters, splintering all over the ground."
-                    "You jump back to avoid the shards."
+                    "The bow strikes the ground and shatters, splintering all over the ground. "
+                    "You jump back to avoid the shards. "
                 )
 
             text += (
                 "You stand next to a sculpture of a ship lying on its side. "
-                "It's sprinkled in leaves and needles and its bow is broken."
-                "You feel bad about pushing it over." 
-                "You can now see a side door next to the construction area."
+                "It's sprinkled in leaves and needles and its bow is broken. "
+                "You feel bad about pushing it over. " 
+                "You can now see a side door next to the construction area. "
             )
         elif context.state == "Ship_Fix":
 
@@ -120,16 +120,16 @@ class ShipwreckYardShip(AdventureRoom):
 
             if context.state_is_new:
                 text += (
-                    "You pull the ship back so that it's standing up."
-                    "The damage is less serious than it seemed with it lying on the ground."
-                    "The prow, once shapely and curving, is now pointed and sharp."
-                    "While you fix the ship you discover a small pendant on the ground."
-                    "Its made of a material you can't identify and you can't resist tucking it into your pocket."
-                    "You feel a little better about pushing the ship over."
+                    "You pull the ship back so that it's standing up. "
+                    "The damage is less serious than it seemed with it lying on the ground. "
+                    "The prow, once shapely and curving, is now pointed and sharp. "
+                    "While you fix the ship you discover a small pendant on the ground. "
+                    "Its made of a material you can't identify and you can't resist tucking it into your pocket. "
+                    "You feel a little better about pushing the ship over. "
                 )
             text += (
                 "You stand next to a sculpture of a ship. It's sprinkled in leaves and needles. "
-                "The freshly pointed prow gives the ship a warlike, strident quality."
+                "The freshly pointed prow gives the ship a warlike, strident quality. "
             )
         return text
 
@@ -162,21 +162,21 @@ class ShipwreckYardSide(AdventureRoom):
         text = ""
         if not context.state:
             text += (
-                "You're standing in front of a propane fire pit. It's surrounded by a circle of chairs."
+                "You're standing in front of a propane fire pit. It's surrounded by a circle of chairs. "
             )
         elif context.state == "Fire_On":
             if context.state_is_new:
-                text +=  "You light the propane burner and it whooshes up into a cheery fire."
+                text +=  "You light the propane burner and it whooshes up into a cheery fire. "
 
             text += (
-                "You're standing in front of a propane fire pit. It's lit, but the fire doesn't cast much"
+                "You're standing in front of a propane fire pit. It's lit, but the fire doesn't cast much "
                 "heat or light in the sunlight. It's surrounded by a circle of chairs."
             )
 
         # common
         text += (
-            "Nearby you can see the can of propane, attached with a hose, and a lighter."
-            "At the side of the house you can see some trash cans and, next to them, a second door"
+            "Nearby you can see the can of propane, attached with a hose, and a lighter. "
+            "At the side of the house you can see some trash cans and, next to them, a second door "
             "into the house."
         )
 
@@ -200,8 +200,8 @@ class ShipwreckLaundry(AdventureRoom):
 
     async def description(self, context: RoomContext) -> str:
         return (
-            "You stand in a cluttered storage room. A washer and dryer are stacked in the corner, opposite an exercise"
-            "machine. Someone is doing a load of laundry. There's another door that leads further into the house and the"
+            "You stand in a cluttered storage room. A washer and dryer are stacked in the corner, opposite an exercise "
+            "machine. Someone is doing a load of laundry. There's another door that leads further into the house and the "
             "door leading back out to the yard."
         )
 
@@ -216,8 +216,9 @@ class ShipwreckLivingRoom(AdventureRoom):
 
     async def description(self, context: RoomContext) -> str:
         return (
-            "You stand in a living room. There's a carpet with a red starburst under several couches and the walls are"
-            "filled with art. There's a broken projector hanging from the ceiling."
+            "You stand in a living room. There's a carpet with a starburst of bright red tufts "
+            "coming out of its center. The carpet is surrounded by several couches and the walls are "
+            "filled with art. There's a broken projector hanging from the ceiling. "
         )
 
     async def choices(self, context: RoomContext) -> Dict[str, str]:
@@ -233,11 +234,11 @@ class ShipwreckKitchen(AdventureRoom):
 
     async def description(self, context: RoomContext) -> str:
         return (
-            "You stand in a kitchen. On your right, there's a large slate table with small piles of mail laid"
-            "out on it. Shelves with various dry goods are mounted above the table. On the left there's a"
-            "cooking area with a stove, refrigerator and food prep area."
-            "Back through the door behind you, you can see the yard and a little propane fire pit."
-            "Past the oven, you can see a living room."
+            "You stand in a kitchen. On your right, there's a large slate table with small piles of mail laid "
+            "out on it. Shelves with various dry goods are mounted above the table. On the left there's a "
+            "cooking area with a stove, refrigerator and food prep area. "
+            "Back through the door behind you, you can see the yard and a little propane fire pit. "
+            "Past the oven, you can see a living room. "
         )
 
     async def choices(self, context: RoomContext) -> Dict[str, str]:
@@ -255,16 +256,16 @@ class ShipwreckLanding(AdventureRoom):
     async def description(self, context: RoomContext) -> str:
 
         text = (
-            "As you walk up the stairs, you suddenly notice an unsettling light pouring out of the room"
-            "on the left. It has a hollow, dark energy to it and you're unsure of what it fortells for you"
+            "As you walk up the stairs, you suddenly notice an unsettling light pouring out of the room "
+            "on the left. It has a hollow, dark energy to it and you're unsure of what it fortells for you "
             "if you walk into it."
         )
 
         if context.scene.get("has_pendant", False):
             text += (
-                "As you feel your body being drawn towards the light, you feel something weighing you down in your pocket."
-                "You reach down and pull out the pendant you found earlier. As you hold it up to the door you can feel"
-                "the lights' pull on your body lessen. The pendant seems to cancel out the threatening nature of the glow."
+                "As you feel your body being drawn towards the light, you feel something weighing you down in your pocket. "
+                "You reach down and pull out the pendant you found earlier. As you hold it up to the door you can feel "
+                "the lights' pull on your body lessen. The pendant seems to cancel out the threatening nature of the glow. "
                 "You put the pendant around your neck and stride, with confidence, into the light."
             )
         else:

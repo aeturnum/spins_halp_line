@@ -72,7 +72,7 @@ class SceneInfo:
             name=d.get('name'),
             rooms_visited=d.get('rooms_visited', []),
             room_states={k: RoomInfo.from_dict(v) for k, v in d.get("room_states", {}).items()},
-            room_queue=d.get('rooms_queue', []),
+            room_queue=d.get('room_queue', []),
             data=d.get('data', {}),
             ended_early=d.get('ended_early', False)
         )
