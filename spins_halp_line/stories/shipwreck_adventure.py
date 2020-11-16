@@ -22,6 +22,9 @@ from spins_halp_line.constants import (
 class AdventureRoom(Room):
     Name = "AdventureRoom"
 
+    def loop(self):
+        return 2
+
     async def description(self, script_data: dict, scene_data: dict) -> str:
         pass
 
@@ -38,10 +41,10 @@ class AdventureRoom(Room):
                 message += "\nWhat would you like to do?"
                 for number, text in choices.items():
                     message += f"\nPress {number} to {text}."
-            g.say(message=message)
-            response.pause(length=2)
-            g.say(message=message)
-            response.pause(length=2)
+            for _ in range(1, self.loop()):
+                g.say(message=message)
+                g.pause(length=2)
+
 
 
         return response
@@ -114,6 +117,9 @@ class ShipwreckLivingRoom(AdventureRoom):
 
 class ShipwreckLanding(AdventureRoom):
     Name = "Shipwreck Landing"
+
+    def loop(self):
+        return 1
 
     async def description(self, script_data: dict, scene_data: dict) -> str:
         return (
