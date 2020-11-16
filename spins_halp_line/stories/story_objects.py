@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Tuple
 from dataclasses import dataclass
 
 from twilio.twiml.voice_response import VoiceResponse
@@ -194,8 +194,9 @@ class Scene(Logger):
         scene_state = self._get_state(script_state)
         self.d(f'play({request}, {script_state}): {scene_state}')
         self.d(f"play({request}): state.rooms_visited: {scene_state.rooms_visited}")
-        # todo: make a way for a room to end the scene early
-        # todo: add a room state
+
+        # tell the room what happened last time
+        script_state, scene_state = await self._notify_last_room_of_choice(request, script_state, scene_state)
 
         # handles either finishing the tunnel we are in or
         # picking a room based on choices.
@@ -251,8 +252,9 @@ class Scene(Logger):
             self,
             request: TwilRequest,
             script_state: ScriptInfo,
-            our_info: SceneInfo) -> None:
-        if our_info.prev_room:
+            our_info: SceneInfo) -> Tuple[ScriptInfo, SceneInfo]:
+        # check that there's a previous room
+        if our_info.prev_room and request.digits:
             player_choice = str(request.digits)
             prev_room = self._name_to_room(our_info.prev_room)
             room_state = our_info.room_state(prev_room.Name)
