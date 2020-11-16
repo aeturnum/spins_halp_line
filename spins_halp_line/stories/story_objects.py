@@ -9,6 +9,7 @@ from spins_halp_line.constants import (
     Script_Any_Number
 )
 from spins_halp_line.player import SceneInfo, ScriptInfo
+from spins_halp_line.events import send_event
 
 
 # This file contains the three-tiered structure for managing phone-based experiences
@@ -134,6 +135,7 @@ class Scene(Logger):
         # remove first member of the room_queue and get the room it references
         room = self._name_to_room(room_queue.pop(0))
 
+        await send_event(f"{request.player} entering {room}!")
         twilio_action = await room.action(request, script_state.data, scene_state.data)
 
         scene_state.rooms_visited.append(room.Name)
