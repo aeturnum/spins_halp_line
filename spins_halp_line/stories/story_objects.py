@@ -239,8 +239,9 @@ class Script(Logger):
     async def call_could_start_game(self, request: TwilRequest):
         await request.load()  # load player
 
-        # check by seeing if this a new player, calling this number, would get a scene
-        scene_state = self._get_scene_state(script_info, request.num_called)
+        # check by seeing if this a new player, with a new ScriptInfo, calling this number,
+        # would get a scene
+        scene_state = self._get_scene_state(ScriptInfo(), request.num_called)
 
         self.d(f"Can {request} start a new game? -> {scene_state is not None}")
         return scene_state is not None
