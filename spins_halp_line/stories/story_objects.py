@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Union
 from dataclasses import dataclass
 
 from twilio.twiml.voice_response import VoiceResponse
@@ -118,7 +118,7 @@ class Room(Logger):
 class Scene(Logger):
     Name = "Base scene"
     Start: List[Room] = []
-    Choices: Dict[Room, Dict[str, Room]] = {}
+    Choices: Dict[Room, Dict[str, Union[Room, List[Room]]]] = {}
 
     # todo: Think about how to perform actions on rooms (i.e. if a room routes back on itself, how
     # todo: do we note that?) Right now we use the digit to route but can't tell the room.
@@ -136,9 +136,13 @@ class Scene(Logger):
             for _, room_choice in choice_info.items():
                 self._add_to_index(room_choice)
 
-    def _add_to_index(self, room: Room):
-        if room.Name not in self._room_index:
-            self._room_index[room.Name] = room
+    def _add_to_index(self, room_list: Union[Room, List[Room]]):
+        if not isinstance(room_list, list):
+            room_list = [room_list]
+
+        for room in room_list:
+            if room.Name not in self._room_index:
+                self._room_index[room.Name] = room
 
     def done(self, info: ScriptInfo) -> bool:
         done = False
