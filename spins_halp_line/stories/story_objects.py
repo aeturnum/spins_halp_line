@@ -141,6 +141,9 @@ class Scene(Logger):
         # update room queue
         scene_state.room_queue = room_queue
 
+        # should not be necessary
+        script_state.scene_states[self.Name] = scene_state
+
         return twilio_action
 
     def _get_state(self, info: ScriptInfo) -> SceneInfo:
@@ -180,6 +183,9 @@ class Scene(Logger):
             elif '*' in room_choices:  # default
                 queue = room_choices['*']
                 self.d(f"Choice *: {queue}")
+
+        # todo: add a default option that tells the user we didn't understand their choice and
+        # todo: replays the previous room
 
         return self._item_to_room_name_list(queue)
 
@@ -270,6 +276,8 @@ class Script(Logger):
             self.d(f'play({request}) - scene is done. Script state: {script_info.state} -> {scene_state.next_state}')
             script_info.scene_history.append(scene.Name)
             script_info.state = scene_state.next_state
+
+        request.player.set_script(self.name, script_info)  # should not be needed
 
         return result
 
