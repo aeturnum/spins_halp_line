@@ -240,10 +240,10 @@ class Script(Logger):
         await request.load()  # load player
 
         # check by seeing if this a new player, calling this number, would get a scene
-        scene_set = self._get_scene_set(ScriptInfo(), request.num_called)
+        scene_state = self._get_scene_state(script_info, request.num_called)
 
-        self.d(f"Can {request} start a new game? -> {scene_set is not None}")
-        return scene_set is not None
+        self.d(f"Can {request} start a new game? -> {scene_state is not None}")
+        return scene_state is not None
 
     async def play(self, request: TwilRequest):
         self.d(f'play({request})')
@@ -251,7 +251,7 @@ class Script(Logger):
         script_info: ScriptInfo = request.player.script(self.name)
         if script_info is None or script_info.is_complete:
             self.d(f'play({request}): Previous script completed or we need a new one.')
-            script_info = ScriptInfo() # fresh!
+            script_info = ScriptInfo()  # fresh!
             request.player.set_script(self.name, script_info)
 
         self.d(f'play({request}) - {script_info}')
@@ -268,14 +268,6 @@ class Script(Logger):
             script_info.state = scene_state.next_state
 
         return result
-
-    # def _find_scene(self, script_info: ScriptInfo, scene_set: SceneAndState):
-    #     our_scene = None
-    #     for scene in scene_set.scenes:
-    #         if not scene.done(script_info):
-    #             our_scene = scene
-    #     self.d(f'_find_scene(script_info, {scene_set}) -> {our_scene}')
-    #     return our_scene
 
     def _get_scene_state(self, info: ScriptInfo, number_called: str) -> Optional[SceneAndState]:
         self.d(f'_get_scene_set(info, {number_called})')

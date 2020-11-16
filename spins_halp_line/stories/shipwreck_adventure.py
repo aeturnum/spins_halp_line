@@ -164,7 +164,7 @@ class ShipwreckScene(Scene):
 #                    | |
 #                    |_|
 
-testing = Script(
+adventure = Script(
     "Shipwreck Adventure",
     {
         Script_New_State: {
@@ -172,5 +172,3 @@ testing = Script(
         }
     }
 )
-
-Script.add_script(testing)

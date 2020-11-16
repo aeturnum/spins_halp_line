@@ -12,7 +12,9 @@ from spins_halp_line.tasks import work_queue, GitUpdate
 from spins_halp_line.twil import t_resp, TwilRequest
 from spins_halp_line.util import do_monkey_patches, get_logger
 from spins_halp_line.stories.story_objects import Script, confused_response
-import spins_halp_line.stories.shipwreck_adventure
+from spins_halp_line.stories.shipwreck_adventure import adventure
+
+Script.add_script(adventure)
 
 do_monkey_patches()
 
