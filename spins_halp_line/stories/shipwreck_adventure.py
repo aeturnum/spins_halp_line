@@ -21,6 +21,7 @@ from spins_halp_line.constants import (
 class AdventureRoom(Room):
     Name = "AdventureRoom"
     State_Transitions = {}
+    Gather = True
 
     def loop(self):
         return 2
@@ -41,18 +42,21 @@ class AdventureRoom(Room):
     async def action(self, context: RoomContext):
         self.d(f"action() context: {context}")
         response = VoiceResponse()
-        with response.gather(num_digits=1, method="POST", action_on_empty_result=True) as g:
-            message = await self.description(context)
-            choices = await self.choices(context)
-            if choices:
-                message += "\nWhat would you like to do?"
-                for number, text in choices.items():
-                    message += f"\nPress {number} to {text}."
-            for loop in range(0, self.loop()):
-                g.say(message=message)
-                # don't pause the last time
-                if loop < self.loop() - 1:
-                    g.pause(length=2)
+        message = await self.description(context)
+        if self.Gather:
+            with response.gather(num_digits=1, method="POST", action_on_empty_result=True) as g:
+                choices = await self.choices(context)
+                if choices:
+                    message += "\nWhat would you like to do?"
+                    for number, text in choices.items():
+                        message += f"\nPress {number} to {text}."
+                for loop in range(0, self.loop()):
+                    g.say(message=message)
+                    # don't pause the last time
+                    if loop < self.loop() - 1:
+                        g.pause(length=2)
+        else:
+            response.say(message=message)
 
 
 
@@ -258,7 +262,7 @@ class ShipwreckLanding(AdventureRoom):
         text = (
             "As you walk up the stairs, you suddenly notice an unsettling light pouring out of the room "
             "on the left. It has a hollow, dark energy to it and you're unsure of what it fortells for you "
-            "if you walk into it."
+            "if you walk into it. "
         )
 
         if context.scene.get("has_pendant", False):
@@ -266,7 +270,7 @@ class ShipwreckLanding(AdventureRoom):
                 "As you feel your body being drawn towards the light, you feel something weighing you down in your pocket. "
                 "You reach down and pull out the pendant you found earlier. As you hold it up to the door you can feel "
                 "the lights' pull on your body lessen. The pendant seems to cancel out the threatening nature of the glow. "
-                "You put the pendant around your neck and stride, with confidence, into the light."
+                "You put the pendant around your neck and stride, with confidence, into the light. "
             )
         else:
             text += (
@@ -281,15 +285,17 @@ class ShipwreckLanding(AdventureRoom):
 
 class ShipwreckEnding(AdventureRoom):
     Name = "Shipwreck Ending"
+    Gather = False
 
     def loop(self):
         return 1
 
     async def description(self, context: RoomContext) -> str:
         return (
-            "Thank you for playing this demo of our phone-based adventure system."
-            "For ease of development, this all uses text-to-speech technology, but we expect the full version"
-            "to contain voice acting, sound effects, text messages, and many other fun things to do."
+            "Thank you for playing this demo of our phone-based adventure system. "
+            "For ease of development, this all uses text-to-speech technology, but we expect the full version "
+            "to contain voice acting, sound effects, text messages, and many other fun things to do. "
+            "However you heard about this project, we would love it if you kept up with development! "
         )
 
     async def choices(self, context: RoomContext) -> Dict[str, str]:
