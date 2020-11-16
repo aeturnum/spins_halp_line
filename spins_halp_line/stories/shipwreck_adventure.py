@@ -41,7 +41,7 @@ class AdventureRoom(Room):
                 message += "\nWhat would you like to do?"
                 for number, text in choices.items():
                     message += f"\nPress {number} to {text}."
-            for _ in range(1, self.loop()):
+            for _ in range(1, self.loop() + 1):
                 g.say(message=message)
                 g.pause(length=2)
 
