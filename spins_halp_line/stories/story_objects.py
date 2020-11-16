@@ -122,6 +122,7 @@ class Scene(Logger):
         self.d(f'play({request}, {script_state})')
         scene_state = self._get_state(script_state)
         self.d(f'play({request}, {script_state}): {scene_state}')
+        self.d(f"play({request}): state.rooms_visited: {scene_state.rooms_visited}")
         # todo: make a way for a room to end the scene early
         # todo: add a room state
 
@@ -136,6 +137,7 @@ class Scene(Logger):
         twilio_action = await room.action(request, script_state.data, scene_state.data)
 
         scene_state.rooms_visited.append(room.Name)
+        self.d(f"play({request}): state.rooms_visited: {scene_state.rooms_visited}")
         # update room queue
         scene_state.room_queue = room_queue
 
