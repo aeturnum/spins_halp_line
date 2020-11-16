@@ -126,7 +126,7 @@ class ShipwreckYardShip(AdventureRoom):
                 text += (
                     "You pull the ship back so that it's standing up. "
                     "The damage is less serious than it seemed with it lying on the ground. "
-                    "The prow, once shapely and curving, is now pointed and sharp. "
+                    "The prow, once shapely and curved, is now pointed and sharp. "
                     "While you fix the ship you discover a small pendant on the ground. "
                     "Its made of a material you can't identify and you can't resist tucking it into your pocket. "
                     "You feel a little better about pushing the ship over. "

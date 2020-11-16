@@ -39,6 +39,10 @@ from spins_halp_line.events import send_event
 #
 
 
+# todo: setup a system for getting a twilio callback and ending sessions cleanly.
+# todo: this probably involves a mode where we replay the last room with no number
+# todo: entered and also gracefully end calls. 
+
 class RoomContext(dict):
 
     def __init__(self, script_state: ScriptInfo, scene_state: SceneInfo, room_state: RoomInfo):
