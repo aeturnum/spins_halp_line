@@ -160,10 +160,8 @@ class Player(Logger):
         return f'plr:{self._number}'
 
     async def save(self):
-        current_data = self.data
-        # only write if we've actually changed something
-        if current_data != self._data:
-            await self._db.set(self._key, json.dumps(current_data))
+        # always save damnit
+        await self._db.set(self._key, json.dumps(self.data))
 
     def ensure_loaded(self):
         if not self._loaded:
