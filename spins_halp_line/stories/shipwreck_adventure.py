@@ -38,8 +38,11 @@ class AdventureRoom(Room):
                 message += "\nWhat would you like to do?"
                 for number, text in choices.items():
                     message += f"\nPress {number} to {text}."
-            g.say(message=message, loop=3)
-            g.pause(1)
+            g.say(message=message)
+            response.pause(length=2)
+            g.say(message=message)
+            response.pause(length=2)
+
 
         return response
 
@@ -67,7 +70,7 @@ class ShipwreckYardShip(AdventureRoom):
     async def description(self, script_data: dict, scene_data: dict) -> str:
         return (
             "You stand next to a sculpture of a ship. It's sprinkled in leaves and needles. You can see that its walls"
-            "are thinner than you thought at a distance. It doesn't look that comfortable but the design is effecting. You" 
+            "are thinner than you thought at a distance. It doesn't look that comfortable but the design is striking. You" 
             "can now see a side door."
         )
 
@@ -132,7 +135,7 @@ class ShipwreckLanding(AdventureRoom):
 # |_____/ \___\___|_| |_|\___||___/
 
 class ShipwreckScene(Scene):
-    Name = "Test scene"
+    Name = "Shipwreck Scene"
     Start = [ShipwreckYardFront()]
     Choices = {
         ShipwreckYardFront(): {

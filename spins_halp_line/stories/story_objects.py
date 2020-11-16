@@ -1,4 +1,4 @@
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Dict
 from dataclasses import dataclass
 
 from twilio.twiml.voice_response import VoiceResponse
@@ -76,7 +76,7 @@ class Scene(Logger):
         super(Scene, self).__init__()
         # because Name and Rooms are class variables this is basically static
         # We use the room index so we can use room names as indexes that we save to redis
-        self._room_index : Dict[str, Room] = {}
+        self._room_index: Dict[str, Room] = {}
         for r in self.Start:
             self._add_to_index(r)
         for r, choice_info in self.Choices.items():
@@ -139,7 +139,6 @@ class Scene(Logger):
         # update room queue
         scene_state.room_queue = room_queue
 
-
         return twilio_action
 
     def _get_state(self, info: ScriptInfo) -> SceneInfo:
@@ -166,15 +165,17 @@ class Scene(Logger):
         queue = []
         # need to turn the previous room into a room object:
         prev_room = self._name_to_room(our_info.prev_room)
+        self.d(f"_get_queue() previous room: {prev_room}")
         if prev_room is not None and prev_room in self.Choices:
             # check if the player has a choice to make
             number_entered = str(request.digits)
             room_choices = self.Choices.get(prev_room)  # dictionary of choice to room
+            self.d(f"_get_queue() choices: {room_choices}")
             # todo: standardize digits as a string?
             if number_entered in room_choices:
                 queue = room_choices[number_entered]
                 self.d(f"Choice #{number_entered}: {queue}")
-            elif '*' in room_choices: # default
+            elif '*' in room_choices:  # default
                 queue = room_choices['*']
                 self.d(f"Choice *: {queue}")
 

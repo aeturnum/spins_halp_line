@@ -47,7 +47,7 @@ class SceneInfo:
         )
 
     @property
-    def prev_room(self) -> str:
+    def prev_room(self) -> Optional[str]:
         room = None
         if len(self.rooms_visited) > 0:
             # get last room on list
@@ -60,7 +60,7 @@ class SceneInfo:
         return len(self.room_queue) > 0
 
     def __str__(self):
-        return f'SceneInfo[{self.name}]{self.rooms_visited}]{self.room_queue}>'
+        return f'SceneInfo[{self.name}]{self.prev_room}]{self.room_queue}>'
 
 
 @dataclass
