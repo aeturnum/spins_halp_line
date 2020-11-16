@@ -11,7 +11,8 @@ from functools import partial
 from spins_halp_line.tasks import work_queue, GitUpdate
 from spins_halp_line.twil import t_resp, TwilRequest
 from spins_halp_line.util import do_monkey_patches, get_logger
-from spins_halp_line.story_objects import Script, confused_response
+from spins_halp_line.stories.story_objects import Script, confused_response
+import spins_halp_line.stories.shipwreck_adventure
 
 do_monkey_patches()
 
@@ -59,7 +60,7 @@ async def main_number():
     # start a new game
     if not response:
         for script in Script.Active_Scripts:
-            if await script.player_eligable(req):
+            if await script.call_could_start_game(req):
                 response = await script.play(req)
                 break
 

@@ -1,4 +1,6 @@
-from spins_halp_line.story_objects import Script, Scene, Room, SceneSet
+from typing import Optional
+
+from spins_halp_line.stories.story_objects import Script, Scene, Room, SceneAndState
 from spins_halp_line.player import ScriptInfo, Player
 from spins_halp_line.constants import (
     Script_New_State,
@@ -12,22 +14,23 @@ class MockPlayer(Player):
     def __init__(self):
         self.scripts = {}
 
-    def script(self, script_name: str):
-        if script_name not in self.scripts:
-            self.scripts[script_name] = ScriptInfo(Script_New_State)
+    def set_script(self, script_name: str, info: ScriptInfo) -> None:
+        self.scripts[script_name] = info
 
-        return self.scripts[script_name]
+    def script(self, script_name: str) -> Optional[ScriptInfo]:
+        return self.scripts.get(script_name, None)
 
 
 class MockRequest:
 
     @staticmethod
-    def make(player, caller, called):
+    def make(player, caller, called = "", digits = ""):
         return MockRequest(
             player,
             {
                 "From": caller,
-                "Called": called
+                "Called": called,
+                "Digits": digits
             }
         )
 
@@ -47,10 +50,12 @@ class MockRequest:
     def num_called(self):
         return self.data.get("Called", None)
 
+    @property
+    def digits(self):
+        return self.data.get("Digits", None)
+
 
 class RoomTest(Room):
-    Name = "Testing Room"
-
     def __init__(self, action_value):
         super(RoomTest, self).__init__()
         self.action_value = action_value
@@ -59,84 +64,145 @@ class RoomTest(Room):
         return self.action_value
 
 
+class RoomTestOne(RoomTest):
+    Name = "First Testing Room"
+
+
+class RoomTestTwo(RoomTest):
+    Name = "Second Testing Room"
+
+
+class RoomTestThree(RoomTest):
+    Name = "Third Testing Room"
+
+
+# scenes
+
+def one_room(expected):
+    class TestScene(Scene):
+        Name = "One Room Scene"
+        Start = [RoomTestOne(expected)]
+
+    return Script(
+        "testing",
+        {
+            Script_New_State: {
+                Script_Any_Number: SceneAndState(TestScene(), Script_End_State)
+            }
+        }
+    )
+
+
+def two_room(expected1, expected2):
+    class TestScene(Scene):
+        Name = "Two Room Scene"
+        Start = [RoomTestOne(expected1), RoomTestTwo(expected2)]
+
+    return Script(
+        "testing",
+        {
+            Script_New_State: {
+                Script_Any_Number: SceneAndState(TestScene(), Script_End_State)
+            }
+        }
+    )
+
+def basic_maze(expected1, expected2, expected3):
+    class TestScene(Scene):
+        Name = "Two Room Scene"
+        Start = [RoomTestOne(expected1)]
+        Choices = {
+            RoomTestOne(expected1): {
+                '1': RoomTestTwo(expected2),
+                '*': RoomTestThree(expected3)
+            },
+            RoomTestTwo(expected1): {
+                '1': RoomTestOne(expected1)
+            }
+        }
+
+    return Script(
+        "testing",
+        {
+            Script_New_State: {
+                Script_Any_Number: SceneAndState(TestScene(), Script_End_State)
+            }
+        }
+    )
+
+# tests
+
 async def test_scene():
     expected = 101
 
-    class TestScene(Scene):
-        Name = "TestTest Scene"
-        Rooms = [RoomTest(expected)]
+    s = one_room(expected)
 
-    script_name = "testing"
     caller = "+1234"
     player = MockPlayer()
 
     req = MockRequest.make(player, caller, "")
 
-    s = Script(
-        script_name,
-        {
-            Script_New_State: {
-                Script_Any_Number: SceneSet([TestScene()], Script_End_State)
-            }
-        }
-    )
-
     # import pudb.b
     result = await s.play(req)
     assert result == expected
-    assert player.scripts[script_name].state == Script_End_State
+    assert player.scripts[s.name].state == Script_End_State
+
+
+async def test_maze():
+    s = basic_maze(1, 2, 3)
+
+    caller = "+1234"
+    player = MockPlayer()
+
+    req = MockRequest.make(player, caller)
+
+    # import pudb.b
+    result = await s.play(req)
+    assert result == 1
+    assert player.scripts[s.name].state != Script_End_State
+
+    req = MockRequest.make(player, caller, digits="1")
+    result = await s.play(req)
+    # check that we went to room two
+    assert result == 2
+    assert player.scripts[s.name].state != Script_End_State
+    result = await s.play(req)
+    # back to room one
+    assert result == 1
+    assert player.scripts[s.name].state != Script_End_State
+    req = MockRequest.make(player, caller, digits="6")
+    result = await s.play(req)
+    # to final room
+    assert result == 3
+    # make sure that we detect that no more moves are possible
+    assert player.scripts[s.name].state == Script_End_State
 
 
 async def test_two_rooms():
     expected1 = 101
     expected2 = 202
 
-    class TestScene(Scene):
-        Name = "test_two_rooms Scene"
-        Rooms = [RoomTest(expected1), RoomTest(expected2)]
+    s = two_room(expected1, expected2)
 
-    script_name = "testing"
     caller = "+1234"
     player = MockPlayer()
 
     req = MockRequest.make(player, caller, "")
-
-    s = Script(
-        script_name,
-        {
-            Script_New_State: {
-                Script_Any_Number: SceneSet([TestScene()], Script_End_State)
-            }
-        }
-    )
 
     # import pudb.b
     result = await s.play(req)
     assert result == expected1
     result = await s.play(req)
     assert result == expected2
-    assert player.scripts[script_name].state == Script_End_State
+    assert player.scripts[s.name].state == Script_End_State
 
 async def test_state():
+    s = one_room("")
 
-    class TestScene(Scene):
-        Name = "test_state Scene"
-        Rooms = [RoomTest('')]
-
-    script_name = "testing"
     caller = "+1234"
     player = MockPlayer()
 
-    req = MockRequest.make(player, caller, "<anywhere>")
-
-    s = Script(
-        script_name,
-        {
-            Script_New_State: {
-                Script_Any_Number: SceneSet([TestScene()], Script_End_State)
-            }
-        }
-    )
+    req = MockRequest.make(player, caller, "")
 
     # import pudb.b
     await s.play(req)

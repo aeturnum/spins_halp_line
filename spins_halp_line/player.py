@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional, List
 import redio
 
 from spins_halp_line.util import Logger
-from spins_halp_line.constants import Script_New_State
+from spins_halp_line.constants import Script_New_State, Script_End_State
 
 
 # holds the class that manages the player info in redis
@@ -33,47 +33,67 @@ def _get_redis():
 @dataclass
 class SceneInfo:
     name: str
-    prev_room: Optional[int] = None
     rooms_visited: List[str] = field(default_factory=list)
+    room_queue: List[str] = field(default_factory=list)
     data: Dict[Any, Any] = field(default_factory=dict)  # the only field exposed to Rooms
 
     @staticmethod
-    def from_dict(d: dict):
+    def from_dict(d: dict) -> 'SceneInfo':  # "python type system is great"
         return SceneInfo(
             name=d.get('name'),
-            prev_room=d.get('prev_room', None),
             rooms_visited=d.get('rooms_visited', []),
+            room_queue=d.get('rooms_queue', []),
             data=d.get('data', {})
         )
 
+    @property
+    def prev_room(self) -> str:
+        room = None
+        if len(self.rooms_visited) > 0:
+            # get last room on list
+            room = self.rooms_visited[-1]
+
+        return room
+
+    @property
+    def has_rooms_in_queue(self) -> bool:
+        return len(self.room_queue) > 0
+
     def __str__(self):
-        return f'SceneInfo[{self.name}]{self.rooms_visited}]{self.prev_room}>'
+        return f'SceneInfo[{self.name}]{self.rooms_visited}]{self.room_queue}>'
 
 
 @dataclass
 class ScriptInfo:
-    state: str
+    state: str = Script_New_State
     scene_states: Dict[str, SceneInfo] = field(default_factory=dict)
-    scene_path: List[str] = field(default_factory=list)
+    scene_history: List[str] = field(default_factory=list)
     data: Dict[Any, Any] = field(default_factory=dict)  # the only field exposed to Rooms
 
-    def scene(self, name: str) -> SceneInfo:
-        if name not in self.scene_states.keys():
-            self.scene_states[name] = SceneInfo(name=name)
+    def add_scene(self, name: str) -> SceneInfo:
+        info = SceneInfo(name=name)
+        self.scene_states[name] = info
 
-        return self.scene_states[name]
+        return info
+
+    def scene(self, name: str) -> Optional[SceneInfo]:
+        return self.scene_states.get(name, None)
+
+    @property
+    def is_complete(self):
+        return self.state == Script_End_State
 
     @staticmethod
     def from_dict(d: dict):
         return ScriptInfo(
-            state=d.get("state"),
+            state=d.get("state", Script_New_State),
             scene_states={k: SceneInfo.from_dict(v) for k, v in d.get("scene_states", {}).items()},
-            scene_path=d.get('scene_path', []),
+            scene_history=d.get('scene_history', []),
             data=d.get('data', {})
         )
 
     def __str__(self):
-        return f'ScriptInfo[{self.state}]{self.scene_path}] -> {list(self.scene_states.keys())}'
+        return f'ScriptInfo[{self.state}]{self.scene_history}] -> {list(self.scene_states.keys())}'
 
 # We could add player information but this may not be the way to do it
 # todo: think about what information we want to store at a global level for a player
@@ -137,7 +157,7 @@ class Player(Logger):
 
     @property
     def _key(self):
-        return f'player:{self._number}'
+        return f'plr:{self._number}'
 
     async def save(self):
         current_data = self.data
@@ -156,14 +176,11 @@ class Player(Logger):
             self.scripts_key: {k: asdict(v) for k, v in self.scripts.items()}
         }
 
-    def script(self, script_name: str) -> ScriptInfo:
-        if script_name not in self.scripts:
-            self.reset_script(script_name)
+    def set_script(self, script_name: str, info: ScriptInfo) -> None:
+        self.scripts[script_name] = info
 
-        return self.scripts[script_name]
-
-    def reset_script(self, script_name: str) -> None:
-        self.scripts[script_name] = ScriptInfo(Script_New_State)
+    def script(self, script_name: str) -> Optional[ScriptInfo]:
+        return self.scripts.get(script_name, None)
 
     def __str__(self):
         return f"Player[{self._number}]"
