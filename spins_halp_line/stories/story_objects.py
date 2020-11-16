@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
 
 from twilio.twiml.voice_response import VoiceResponse
@@ -8,7 +8,7 @@ from spins_halp_line.twil import TwilRequest
 from spins_halp_line.constants import (
     Script_Any_Number
 )
-from spins_halp_line.player import SceneInfo, ScriptInfo
+from spins_halp_line.player import SceneInfo, ScriptInfo, RoomInfo
 from spins_halp_line.events import send_event
 
 
@@ -39,10 +39,60 @@ from spins_halp_line.events import send_event
 #
 
 
+class RoomContext(dict):
+
+    def __init__(self, script_state: ScriptInfo, scene_state: SceneInfo, room_state: RoomInfo):
+        # fill with our info
+        super(RoomContext, self).__init__(room_state.data)
+
+        self.script = script_state.data
+        self.scene = scene_state.data
+        self.choices = room_state.choices
+        self._start_state = room_state.state
+        self.state = room_state.state
+        self.state_is_new = room_state.fresh_state
+        self._ended = scene_state.ended_early
+
+
+    def _pass_back_changes(self, script_state: ScriptInfo, scene_state: SceneInfo, room_state: RoomInfo):
+        script_state.data = self.script
+        scene_state.data = self.scene
+
+        # record if this room ended the scene early
+        scene_state.ended_early = self._ended
+        # don't copy choices back
+        # also don't copy state_is_new back
+
+        if self._start_state == self.state:
+            # no state change
+            room_state.fresh_state = False
+        else:
+            # state change!
+            room_state.state = self.state
+            room_state.fresh_state = True
+
+        for k, v in self.items():
+            room_state.data[k] = v
+
+        return script_state, scene_state, room_state
+
+    def end_scene(self):
+        self._ended = True
+
+
 class Room(Logger):
     Name = "Base room"
+    # REMEMBER
+    # We cannot store things in the room object because the room object is *shared between players*
+    # so one player would change the other room and the other would see it.
+    # Everything has to be done by passing around per-player state
 
-    async def action(self, request: TwilRequest, script_data: dict, scene_data: dict):
+
+    # Must add choice to room state outside of this
+    async def new_player_choice(self, choice: str, context: RoomContext):
+        pass
+
+    async def action(self, context: RoomContext):
         raise ValueError("Cannot use base class of Room")
 
     def __eq__(self, other):
@@ -52,10 +102,10 @@ class Room(Logger):
         return other.Name == self.Name
 
     def __hash__(self):
-        # todo: WARNING - this makes all coppies of a room equivilant to another
+        # todo: WARNING - this makes all copies of a room equivalent to another
         # todo: This should be *fine* for now, but it means that we MUST only use
         # todo: rooms in the _room_index of a scene, and never use a room in the
-        # todo: choices array
+        # todo: choices array. Otherwise we will lose any state in the rooms.
         return self.Name.__hash__()
 
     def __str__(self):
@@ -70,7 +120,7 @@ class Scene(Logger):
     Start: List[Room] = []
     Choices: Dict[Room, Dict[str, Room]] = {}
 
-    # todo: think about how to perform actions on rooms (i.e. if a room routes back on itself, how
+    # todo: Think about how to perform actions on rooms (i.e. if a room routes back on itself, how
     # todo: do we note that?) Right now we use the digit to route but can't tell the room.
 
     def __init__(self):
@@ -98,8 +148,11 @@ class Scene(Logger):
         our_info = info.scene(self.Name)
         # we are not done if our scene info doesn't even exist yet
         if our_info:
+            if our_info.ended_early:
+                done = True
+                self.d(f"done! - ended early {done}")
             # if the room_queue has rooms we are not done and can return
-            if not our_info.room_queue:
+            elif not our_info.room_queue:
                 # since we have no rooms in queue we continue...
                 prev_room = self._name_to_room(our_info.prev_room)
                 if not prev_room:
@@ -135,15 +188,26 @@ class Scene(Logger):
         # remove first member of the room_queue and get the room it references
         room = self._name_to_room(room_queue.pop(0))
 
+        # get room state
+        room_state = scene_state.room_state(room.Name)
+        self.d(f"room state: {room_state}")
+        # make whole context object
+        context = RoomContext(script_state, scene_state, room_state)
+
         await send_event(f"{request.player} entering {room}!")
-        twilio_action = await room.action(request, script_state.data, scene_state.data)
+        twilio_action = await room.action(context)
+
+        # post room updates
+        # I am now paranoid about state not getting written and am done fucking around
+        script_state, scene_state, room_state = context._pass_back_changes(script_state, scene_state, room_state)
 
         scene_state.rooms_visited.append(room.Name)
         self.d(f"play({request}): state.rooms_visited: {scene_state.rooms_visited}")
         # update room queue
         scene_state.room_queue = room_queue
 
-        # should not be necessary
+        # more paranoia about failures to write
+        scene_state.room_states[room.Name] = room_state
         script_state.scene_states[self.Name] = scene_state
 
         return twilio_action
@@ -160,6 +224,28 @@ class Scene(Logger):
 
     def _name_to_room(self, room_name: str) -> Optional[Room]:
         return self._room_index.get(room_name, None)
+
+    async def _notify_last_room_of_choice(
+            self,
+            request: TwilRequest,
+            script_state: ScriptInfo,
+            our_info: SceneInfo) -> None:
+        if our_info.prev_room:
+            player_choice = str(request.digits)
+            prev_room = self._name_to_room(our_info.prev_room)
+            room_state = our_info.room_state(prev_room.Name)
+
+            # room)state.choice will NOT have the new choice in it
+            context = RoomContext(script_state, our_info, room_state)
+            await prev_room.new_player_choice(player_choice, context)
+
+            script_state, our_info, room_state = context._pass_back_changes(script_state, our_info, room_state)
+            room_state.choices.append(player_choice)
+            # more paranoia
+            our_info.room_states[prev_room.Name] = room_state
+
+        return script_state, our_info
+
 
     def _get_queue(self, request: TwilRequest, our_info: SceneInfo) -> List[str]:
         self.d(f"_get_queue()")

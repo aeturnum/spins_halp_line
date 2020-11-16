@@ -31,19 +31,50 @@ def _get_redis():
 
 
 @dataclass
+class RoomInfo:
+    name: str
+    state: str = ""
+    fresh_state: bool = True
+    choices: List[str] = field(default_factory=list)
+    data: Dict[Any, Any] = field(default_factory=dict)  # the only field exposed to Rooms
+
+    @staticmethod
+    def from_dict(d: dict) -> 'RoomInfo':  # "python type system is great"
+        return RoomInfo(
+            name=d.get('name'),
+            state=d.get('state', ""),
+            fresh_state=d.get('fresh_state', True),
+            choices=d.get('choices', []),
+            data=d.get('data', {})
+        )
+
+    def __str__(self):
+        return f'RoomInfo[{self.name}]'
+
+@dataclass
 class SceneInfo:
     name: str
     rooms_visited: List[str] = field(default_factory=list)
+    room_states: Dict[str, RoomInfo] = field(default_factory=dict)
     room_queue: List[str] = field(default_factory=list)
     data: Dict[Any, Any] = field(default_factory=dict)  # the only field exposed to Rooms
+    ended_early: bool = False
+
+    def room_state(self, name: str) -> RoomInfo:
+        if name not in self.room_states:
+            self.room_states[name] = RoomInfo(name)
+
+        return self.room_states[name]
 
     @staticmethod
     def from_dict(d: dict) -> 'SceneInfo':  # "python type system is great"
         return SceneInfo(
             name=d.get('name'),
             rooms_visited=d.get('rooms_visited', []),
+            room_states={k: RoomInfo.from_dict(v) for k, v in d.get("room_states", {}).items()},
             room_queue=d.get('rooms_queue', []),
-            data=d.get('data', {})
+            data=d.get('data', {}),
+            ended_early=d.get('ended_early', False)
         )
 
     @property

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from spins_halp_line.stories.story_objects import Script, Scene, Room, SceneAndState
+from spins_halp_line.stories.story_objects import Script, Scene, Room, SceneAndState, RoomContext
 from spins_halp_line.player import ScriptInfo, Player
 from spins_halp_line.constants import (
     Script_New_State,
@@ -13,6 +13,7 @@ class MockPlayer(Player):
 
     def __init__(self):
         self.scripts = {}
+        self._number = "testing"
 
     def set_script(self, script_name: str, info: ScriptInfo) -> None:
         self.scripts[script_name] = info
@@ -60,7 +61,7 @@ class RoomTest(Room):
         super(RoomTest, self).__init__()
         self.action_value = action_value
 
-    async def action(self, request, script_data, scene_data):
+    async def action(self, context: RoomContext):
         return self.action_value
 
 
