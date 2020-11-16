@@ -291,6 +291,7 @@ class ShipwreckEnding(AdventureRoom):
         return 1
 
     async def description(self, context: RoomContext) -> str:
+        context.end_scene()
         return (
             "Thank you for playing this demo of our phone-based adventure system. "
             "For ease of development, this all uses text-to-speech technology, but we expect the full version "
