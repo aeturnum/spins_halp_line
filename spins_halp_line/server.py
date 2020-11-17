@@ -53,6 +53,11 @@ async def hello():
     </body>
     """
 
+@app.route('/events/ws')
+async def events():
+    return ""
+
+
 @app.websocket('/events/ws')
 @event_websocket
 async def events(read_channel: MemoryReceiveChannel):
