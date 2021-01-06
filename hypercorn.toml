@@ -4,5 +4,3 @@ access_log_format="%(s)s] %(r)s -> %(b)sb[%(L)ss]"
 accesslog="-"
 errorlog="-"
 use_reloader=true
-certfile="/etc/letsencrypt/live/drex.space/fullchain.pem"
-keyfile="/etc/letsencrypt/live/drex.space/privkey.pem"

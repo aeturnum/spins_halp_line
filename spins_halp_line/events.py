@@ -24,6 +24,8 @@ def event_websocket(func):
 
 async def send_event(text: str):
     global event_websocket_channels
-    for channel in event_websocket_channels:
-        print(f"sending {text} to {channel}")
-        await channel.send(text)
+    try:
+        for channel in event_websocket_channels:
+            await channel.send(text)
+    except Exception as e:
+        print(f"Got exception {e} in send_event")

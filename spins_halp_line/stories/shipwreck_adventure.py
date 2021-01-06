@@ -2,7 +2,6 @@ from typing import Dict
 
 from twilio.twiml.voice_response import VoiceResponse
 
-
 from .story_objects import Room, Scene, Script, SceneAndState, RoomContext
 from spins_halp_line.constants import (
     Script_New_State,
