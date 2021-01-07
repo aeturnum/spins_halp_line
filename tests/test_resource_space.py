@@ -6,4 +6,3 @@ async def test_search():
     print(search)
     for resource in search:
         print(resource._data)
-    assert False
