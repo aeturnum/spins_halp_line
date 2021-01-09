@@ -151,6 +151,12 @@ class Player(Logger):
     _info = 'info'
     scripts_key = 'scripts'
 
+    @classmethod
+    async def get_all_json(cls):
+        db = _get_redis()
+        print(await db.scan("scan", "0", "MATCH plr:*"))
+        return ""
+
     def __init__(self, number):
         super(Player, self).__init__()
         global _redis

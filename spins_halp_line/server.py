@@ -16,6 +16,7 @@ from spins_halp_line.util import do_monkey_patches, get_logger
 from spins_halp_line.stories.story_objects import Script, confused_response
 from spins_halp_line.stories.shipwreck_adventure import adventure
 from spins_halp_line.events import event_websocket, send_event
+from spins_halp_line.player import Player
 
 Script.add_script(adventure)
 
@@ -100,6 +101,19 @@ async def main_number():
     await req.player.save()
 
     return t_resp(response)
+#
+#  _____       _                       _               ______           _             _       _
+# |  __ \     | |                     (_)             |  ____|         | |           (_)     | |
+# | |  | | ___| |__  _   _  __ _  __ _ _ _ __   __ _  | |__   _ __   __| |_ __   ___  _ _ __ | |_ ___
+# | |  | |/ _ \ '_ \| | | |/ _` |/ _` | | '_ \ / _` | |  __| | '_ \ / _` | '_ \ / _ \| | '_ \| __/ __|
+# | |__| |  __/ |_) | |_| | (_| | (_| | | | | | (_| | | |____| | | | (_| | |_) | (_) | | | | | |_\__ \
+# |_____/ \___|_.__/ \__,_|\__, |\__, |_|_| |_|\__, | |______|_| |_|\__,_| .__/ \___/|_|_| |_|\__|___/
+#                           __/ | __/ |         __/ |                    | |
+#                          |___/ |___/         |___/                     |_|
+
+@app.route("/players", methods=['GET'])
+async def list_players():
+    return Player.get_all_json()
 
 #   _____ _ _     ______           _             _       _
 #  / ____(_) |   |  ____|         | |           (_)     | |
