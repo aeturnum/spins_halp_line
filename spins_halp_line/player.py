@@ -154,7 +154,7 @@ class Player(Logger):
     @classmethod
     async def get_all_json(cls):
         db = _get_redis()
-        print(await db.scan("scan", "0", "MATCH plr:*"))
+        print(await db.scan("0 MATCH plr:*"))
         return ""
 
     def __init__(self, number):
