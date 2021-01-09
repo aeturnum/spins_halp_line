@@ -113,7 +113,7 @@ async def main_number():
 
 @app.route("/players", methods=['GET'])
 async def list_players():
-    return Player.get_all_json()
+    return await Player.get_all_json()
 
 #   _____ _ _     ______           _             _       _
 #  / ____(_) |   |  ____|         | |           (_)     | |
