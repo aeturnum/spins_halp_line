@@ -124,7 +124,7 @@ async def list_players():
     <div id="players"></div>
     <script>
         const data = '{json.dumps(await Player.get_all_json())}';
-        const tree = JsonView.renderJSON(data, document.querySelector('.players'));
+        const tree = JsonView.renderJSON(data, document.querySelector('#players'));
     </script>
     </body>
     """
