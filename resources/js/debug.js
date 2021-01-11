@@ -7,7 +7,17 @@ function displayThisJson(data, player_id) {
 }
 
 function deletePlayer(friendly_key) {
-	fetch(`/players/${friendly_key}`, {method: 'DELETE'});
+	return () => {
+	    fetch(`/players/${friendly_key}`, {method: 'DELETE'})
+            .then(res => {
+                if (res.ok) {
+                    // redo setup
+                    fetch('/players').then(res => res.json()).then(data => setupTable(data));
+                } else {
+                    res.text().then(text => console.log(`Delete Failed: ${text}`));
+                }
+            })
+	}
 }
 
 function setupTableHead(table) {

@@ -141,7 +141,7 @@ async def list_players():
 
 @app.route("/players/<p_num>", methods=['DELETE'])
 async def delete_player(p_num):
-    return await Player.reset(Player.from_number(p_num))
+    return str(await Player.reset(Player.from_number(p_num)))
 #   _____ _ _     ______           _             _       _
 #  / ____(_) |   |  ____|         | |           (_)     | |
 # | |  __ _| |_  | |__   _ __   __| |_ __   ___  _ _ __ | |_ ___
