@@ -112,29 +112,39 @@ async def main_number():
 #                           __/ | __/ |         __/ |                    | |
 #                          |___/ |___/         |___/                     |_|
 
+@app.route("/debug", methods=["GET"])
+async def debug_interface():
+    return f"""
+        <head>
+            <link rel="stylesheet" type="text/css" href="/css/main.css">
+            <link rel="stylesheet" type="text/css" href="/css/jsonview.bundle.css">
+            <script src="/js/jsonview.bundle.js"></script>
+            <script src="/js/umbrella.min.js"></script>
+        </head>
+        <body>
+            <main class="wrapper">
+                <div class="left" id="players"></div>
+                <div class="right" id="json"></div>
+            </main>
+        <script>
+            fetch('/players')
+                .then(res => res.json())
+                .then(
+                    data => {{
+                        u("#players).append(plr => `<p>${{ plr }}</p>`, Object.keys(data));
+                        const tree = JsonView.renderJSON(data, document.querySelector('#players'));
+                        JsonView.expandChildren(tree); // Expand tree after rendering   
+                    }}
+                )
+        </script>
+        </body>
+        """
+
 @app.route("/players", methods=['GET'])
 async def list_players():
+    return jsonify(await Player.get_all_json())
     # Who needs a template library?
-    return f"""
-    <head>
-        <link rel="stylesheet" type="text/css" href="/css/main.css">
-        <link rel="stylesheet" type="text/css" href="/css/jsonview.bundle.css">
-        <script src="/js/jsonview.bundle.js"></script>
-        <script src="/js/umbrella.min.js"></script>
-    </head>
-    <body>
-        <main class="wrapper">
-            <div class="left" id="players"></div>
-            <div class="right" id="json"></div>
-        </main>
-    <script>
-        const data = '{json.dumps(await Player.get_all_json())}';
-        u("#players).append(plr => `<p>${{ plr }}</p>`, Object.keys(data));
-        const tree = JsonView.renderJSON(data, document.querySelector('#players'));
-        JsonView.expandChildren(tree); // Expand tree after rendering
-    </script>
-    </body>
-    """
+
 
 @app.route("/players/<p_num>", methods=['DELETE'])
 async def delete_player(p_num):
