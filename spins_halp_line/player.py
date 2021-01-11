@@ -152,9 +152,33 @@ class Player(Logger):
     scripts_key = 'scripts'
 
     @classmethod
-    async def get_all_json(cls):
+    async def _get_player_keys(cls) -> List[str]:
+        # This is a bad method, but I'm not sure how to make it better. There is no documentation in redio about
+        # how to specify a filter in scan (which redis supports but we'd need to format properly) and, in any
+        # case, a filter would still get all keys first but only give us some of them. Hopefully a minor
+        # optimization?
         db = _get_redis()
-        print(await db.scan("0 MATCH plr:*"))
+        cursor = "0"
+        players = []
+        while True:
+            scan = await db.scan(cursor) # don't use autodecode here because the cursor should stay a string I think?
+            cursor = scan[0].decode("utf-8") # scan returns bytes
+            these_players = [entry.decode("utf-8") for entry in scan[1] if entry[0:4] == b'plr:']
+            for entry in these_players:
+                print(entry)
+
+            players.extend(these_players)
+
+            if cursor == "0":
+                break
+
+        return players
+
+    @classmethod
+    async def get_all_json(cls) -> List[dict]:
+        db = _get_redis()
+        players = await cls._get_player_keys()
+        print(await db.mget(" ".join(players)).autodecode)
         return ""
 
     def __init__(self, number):
