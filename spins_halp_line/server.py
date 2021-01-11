@@ -1,4 +1,5 @@
 import subprocess
+import json
 
 from hypercorn.config import Config
 from hypercorn.trio import serve
@@ -113,7 +114,20 @@ async def main_number():
 
 @app.route("/players", methods=['GET'])
 async def list_players():
-    return jsonify(await Player.get_all_json())
+    # Who needs a template library?
+    return f"""
+    <head>
+        <link rel="stylesheet" type="text/css" href="/css/jsonview.bundle.css">
+        <script src="/js/jsonview.bundle.js"></script>
+    </head>
+    <body>
+    <div id="players"></div>
+    <script>
+        const data = '{json.dumps(await Player.get_all_json())}';
+        const tree = JsonView.renderJSON(data, document.querySelector('.players'));
+    </script>
+    </body>
+    """
 
 #   _____ _ _     ______           _             _       _
 #  / ____(_) |   |  ____|         | |           (_)     | |
