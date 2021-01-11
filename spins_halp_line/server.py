@@ -139,19 +139,23 @@ async def debug_interface():
             }}
             
             function deletePlayer(friendly_key) {{
-                fetch(`/players/${{friendly_key}}` {{method: 'DELETE'}});
+                fetch(`/players/${{friendly_key}}`, {{method: 'DELETE'}});
             }}
             
             function setupTableHead(table) {{
                 let tHead = table.createTHead();
                 let row = tHead.insertRow();
+                
                 let th = document.createElement("th");
                 th.appendChild(document.createTextNode("Players"));
+                row.appendChild(th);
+                
+                th = document.createElement("th");
                 th.appendChild(document.createTextNode("Delete"));
                 row.appendChild(th);
             }}
             
-            function setupTableRow(key, table) {{
+            function setupTableRow(key, tablei, data) {{
                 let friendly_key = key.substring(5); // remove plr:+
             
                 let row = table.insertRow();
@@ -163,7 +167,7 @@ async def debug_interface():
                 displayInfo.onclick = displayThisJson(data, key);
                 cell.appendChild(displayInfo);
             
-                let cell = row.insertCell();
+                cell = row.insertCell();
                 let deleteButton = document.createElement("input");
                 deleteButton.type = "button";
                 deleteButton.value = `Delete ${{friendly_key}}`;
@@ -175,7 +179,7 @@ async def debug_interface():
                 let table = u("#players").nodes[0];
                 setupTableHead(table);
                 for (let key of Object.keys(data)) {{
-                        
+                    setupTableRow(key, table, data);
                 }}
             }}
 
