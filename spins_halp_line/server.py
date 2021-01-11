@@ -117,18 +117,28 @@ async def list_players():
     # Who needs a template library?
     return f"""
     <head>
+        <link rel="stylesheet" type="text/css" href="/css/main.css">
         <link rel="stylesheet" type="text/css" href="/css/jsonview.bundle.css">
         <script src="/js/jsonview.bundle.js"></script>
+        <script src="/js/umbrella.min.js"></script>
     </head>
     <body>
-    <div id="players"></div>
+        <main class="wrapper">
+            <div class="left" id="players"></div>
+            <div class="right" id="json"></div>
+        </main>
     <script>
         const data = '{json.dumps(await Player.get_all_json())}';
+        u("#players).append(plr => `<p>${{ plr }}</p>`, Object.keys(data));
         const tree = JsonView.renderJSON(data, document.querySelector('#players'));
+        JsonView.expandChildren(tree); // Expand tree after rendering
     </script>
     </body>
     """
 
+@app.route("/players/<p_num>", methods=['DELETE'])
+async def delete_player(p_num):
+    return await Player.reset(Player.from_number(p_num))
 #   _____ _ _     ______           _             _       _
 #  / ____(_) |   |  ____|         | |           (_)     | |
 # | |  __ _| |_  | |__   _ __   __| |_ __   ___  _ _ __ | |_ ___

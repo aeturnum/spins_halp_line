@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field, asdict, fields as datafields
 import json
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Union
 
 import redio
 
@@ -182,6 +182,15 @@ class Player(Logger):
         return {
             player: player_dicts[idx] for idx, player in enumerate(players)
         }
+
+    @classmethod
+    async def reset(cls, plr):
+        db = _get_redis()
+        return await db.delete(plr)
+
+    @classmethod
+    def from_number(cls, number: Union[int, str]) -> str:
+        return f'plr:+{number}'
 
     def __init__(self, number):
         super(Player, self).__init__()
