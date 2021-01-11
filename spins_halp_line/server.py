@@ -3,7 +3,7 @@ import subprocess
 from hypercorn.config import Config
 from hypercorn.trio import serve
 from quart_trio import QuartTrio
-from quart import request, websocket
+from quart import request, websocket, jsonify
 import trio_asyncio
 import trio
 from functools import partial
@@ -113,7 +113,7 @@ async def main_number():
 
 @app.route("/players", methods=['GET'])
 async def list_players():
-    return await Player.get_all_json()
+    return jsonify(await Player.get_all_json())
 
 #   _____ _ _     ______           _             _       _
 #  / ____(_) |   |  ____|         | |           (_)     | |

@@ -175,11 +175,13 @@ class Player(Logger):
         return players
 
     @classmethod
-    async def get_all_json(cls) -> List[dict]:
+    async def get_all_json(cls) -> dict:
         db = _get_redis()
         players = await cls._get_player_keys()
-        print(await db.mget(" ".join(players)).autodecode)
-        return ""
+        player_dicts = await db.mget(" ".join(players)).autodecode
+        return {
+            player: player_dicts[idx] for idx, player in enumerate(players)
+        }
 
     def __init__(self, number):
         super(Player, self).__init__()
