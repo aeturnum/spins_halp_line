@@ -2,7 +2,7 @@ from typing import Optional
 
 from spins_halp_line.stories.story_objects import Script, Scene, Room, SceneAndState, RoomContext
 from spins_halp_line.player import ScriptInfo, Player
-from spins_halp_line.util import PhoneNumber
+from spins_halp_line.resources.numbers import PhoneNumber
 from spins_halp_line.constants import (
     Script_New_State,
     Script_Any_Number,

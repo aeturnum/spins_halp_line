@@ -1,5 +1,7 @@
 from spins_halp_line.player import ScriptInfo
-from spins_halp_line.util import Snapshot, PhoneNumber
+from spins_halp_line.util import Snapshot
+from spins_halp_line.resources.numbers import PhoneNumber
+
 
 async def test_player_object():
     si = ScriptInfo.from_dict({})

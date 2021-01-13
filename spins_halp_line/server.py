@@ -11,15 +11,16 @@ from functools import partial
 
 from trio import MemoryReceiveChannel
 
-from spins_halp_line.tasks import work_queue, GitUpdate
+from spins_halp_line.tasks import work_queue, GitUpdate, Task
 from spins_halp_line.twil import t_resp, TwilRequest
 from spins_halp_line.util import do_monkey_patches, get_logger
+from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.stories.story_objects import Script, confused_response
 from spins_halp_line.stories.shipwreck_adventure import adventure
 from spins_halp_line.events import event_websocket, send_event
 from spins_halp_line.player import Player
 from spins_halp_line.actions.twilio import (
-    Conf_Twiml_Path, Conf_Status_Path, conferences, TwilConference
+    Conf_Twiml_Path, Conf_Status_Path, conferences, TwilConference, new_conference
 )
 
 Script.add_script(adventure)
@@ -150,6 +151,15 @@ async def conf_status_update(c_number):
 # |_____/ \___|_.__/ \__,_|\__, |\__, |_|_| |_|\__, | |______|_| |_|\__,_| .__/ \___/|_|_| |_|\__|___/
 #                           __/ | __/ |         __/ |                    | |
 #                          |___/ |___/         |___/                     |_|
+@app.route("/debug/conf", methods=["POST"])
+async def debug_conf_call():
+    req = TwilRequest(request)
+    await req.load()
+
+    num1 = PhoneNumber(req.data['num1'])
+    conf = await new_conference()
+    await conf.add_participant(Global_Number_Library.random(), num1)
+
 
 @app.route("/debug", methods=["GET"])
 async def debug_interface():
@@ -172,13 +182,11 @@ async def debug_interface():
         </body>
         """
 
-@app.route("/players", methods=['GET'])
+@app.route("/debug/players", methods=['GET'])
 async def list_players():
     return jsonify(await Player.get_all_json())
-    # Who needs a template library?
 
-
-@app.route("/players/<p_num>", methods=['DELETE'])
+@app.route("/debug/players/<p_num>", methods=['DELETE'])
 async def delete_player(p_num):
     return str(await Player.reset(Player.from_number(p_num)))
 #   _____ _ _     ______           _             _       _
@@ -207,11 +215,34 @@ async def pull_git():
 #  ____) |  __/ |   \ V /  __/ |    | |_) | (_) | | | (_) | (__|   <\__ \
 # |_____/ \___|_|    \_/ \___|_|    |____/ \___/|_|_|\___/ \___|_|\_\___/
 
+
+# Helper class to do any async loading that needed before we start accepting connections
+class ServerLoad(Task):
+    _re_raise_exceptions = True # crash proper when we crash
+
+    def __init__(self, nursry: trio.Nursery, serve_function):
+        super(ServerLoad, self).__init__()
+
+        self._nurse = nursry
+        self._serve = serve_function
+
+    async def execute(self):
+        self.d("Server Startup Beginning")
+        self.d("Loading Global Number Library")
+        await Global_Number_Library.load()
+        self.d("Server Loading Finished")
+
+        self.d("Starting Web Server")
+        self._nurse.start_soon(self._serve)
+
+
 async def async_layer():
     async with trio_asyncio.open_loop():
         async with trio.open_nursery() as nurse:
             # start our own
-            nurse.start_soon(partial(serve, app, config))
+            # do any server loading needed
+            await add_task.send(ServerLoad(nurse, partial(serve, app, config)))
             nurse.start_soon(work_queue, get_task)
+
 
 trio_asyncio.run(async_layer)

@@ -5,7 +5,6 @@ from copy import deepcopy
 import trio
 
 import hypercorn.logging as hyplog
-import phonenumbers
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -44,9 +43,24 @@ def do_monkey_patches():
     # who needs config options with python
     hyplog._create_logger = our_create_logger
 
+_logger = None
 
 def get_logger():
-    return logging.getLogger("spins")
+    global _logger
+    if _logger is None:
+        formatter = logging.Formatter('[%(asctime)s.%(msecs)03d]%(message)s', datefmt="%d|%H:%M:%S")
+
+        stream_formatter = logging.StreamHandler()
+        stream_formatter.setFormatter(formatter)
+
+        logger = logging.getLogger("spins")
+        # https://stackoverflow.com/questions/19561058/duplicate-output-in-simple-python-logging-configuration/19561320#19561320
+        logger.propagate = False # prevent double logs
+        logger.handlers.clear()
+        logger.addHandler(stream_formatter)
+        _logger = logger
+
+    return _logger
 
 
 class Logger(object):
@@ -55,15 +69,17 @@ class Logger(object):
         super(Logger, self).__init__()
         self._log = get_logger()
 
+    def _log_line(self, level, line) -> str:
+        return f' {level}|{self}: {line}'
+
     def e(self, line):
-        self._log.error(f'{self}: {line}', stacklevel=2)
+        self._log.error(self._log_line('E',line), stacklevel=2)
 
     def w(self, line):
-        self._log.warning(f'{self}: {line}', stacklevel=2)
+        self._log.warning(self._log_line('W',line), stacklevel=2)
 
     def d(self, line):
-        # print(f'{self}: {line}')
-        self._log.debug(f'{self}: {line}', stacklevel=2)
+        self._log.debug(self._log_line('D',line), stacklevel=2)
 
     def __str__(self):
         return str(self.__class__)
@@ -155,46 +171,3 @@ class Snapshot:
     def restore(self):
         for key, value in vars(self._snap).items():
             setattr(self._ref, key, value)
-
-# Helper class to transform numbers
-class PhoneNumber:
-
-    def __init__(self, number: Union[str, int, 'PhoneNumber']):
-        if isinstance(number, PhoneNumber):
-            # This is to allow us to construct PhoneNumbers everywhere and not worry about nesting
-            self._e164 = number._e164
-        else:
-            self._e164 = self._parse(number)
-
-    # This is a rough, hand-rolled method for dealing with numbers
-    def _parse(self, number) -> phonenumbers.PhoneNumber:
-        if isinstance(number, int):
-            number = str(number)
-
-        try:
-            # check for a clean e164
-            number = phonenumbers.parse(number)
-        except phonenumbers.phonenumberutil.NumberParseException:
-            # if this throws just let it fly
-            number = phonenumbers.parse("+1" + number)
-
-
-
-        return number
-
-    # Used for twilio purposes
-    @property
-    def e164(self):
-        return phonenumbers.format_number(self._e164, phonenumbers.PhoneNumberFormat.E164)
-
-    @property
-    def friendly(self):
-        if self._e164.country_code == 1:
-            # If in the US or Canada, just do national
-            return phonenumbers.format_number(self._e164, phonenumbers.PhoneNumberFormat.NATIONAL)
-        else:
-            # Otherwise international
-            return phonenumbers.format_number(self._e164, phonenumbers.PhoneNumberFormat.INTERNATIONAL)
-
-    def __str__(self):
-        return self.friendly

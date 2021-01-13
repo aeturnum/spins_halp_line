@@ -1,29 +1,30 @@
 import json
-from copy import copy
 from typing import List, Union
 
 import trio
 from twilio import rest
 from twilio.twiml.voice_response import Conference, Dial, VoiceResponse
-from greenletio import async_
-from trio_asyncio import aio_as_trio
+# from greenletio import async_
+# from trio_asyncio import aio_as_trio
 from twilio.base import values
 
 from ..constants import Credentials, Root_Url
-from spins_halp_line.services.redis import new_redis
-from spins_halp_line.util import LockManager, PhoneNumber
+from spins_halp_line.resources.redis import new_redis
+from spins_halp_line.util import LockManager
+from ..resources.numbers import PhoneNumber
 
-_twilio_client : rest.Client = rest.Client(Credentials["twilio"]["sid"], Credentials["twilio"]["token"])
+_twilio_client: rest.Client = rest.Client(Credentials["twilio"]["sid"], Credentials["twilio"]["token"])
 _twil_lock = trio.Lock()
 _conference_lock = trio.Lock()
 # I get why we use strings of object names that haven't been defined yet but like my god
-_conferences : List['TwilConference'] = []
+_conferences: List['TwilConference'] = []
 _last_conference = 0
 
 _conference_key = "spins_conference_list"
 
 Conf_Twiml_Path = "/conf/twiml/<cnumber>"
 Conf_Status_Path = "/conf/status/<cnumber>"
+
 
 # This exists because we need to keep track of conferences and how they are progressing
 class TwilConference:
@@ -80,20 +81,20 @@ class TwilConference:
 
         async with LockManager(_conference_lock, locked):
             for conf in _conferences:
-                if conf.matches(conf_id): # use function to handle type problems
+                if conf.matches(conf_id):  # use function to handle type problems
                     if conf.twil_sid is None:
                         conf.twil_sid = args.get('ConferenceSid')
-                    event = args.get('StatusCallbackEvent')
+                    # event = args.get('StatusCallbackEvent')
 
                     await cls._save_conference_list(_conferences)
 
         return ""
 
-    def __init__(self, id, participants=None, sid=None):
+    def __init__(self, id_, participants=None, sid=None):
         if not participants:
             participants = []
 
-        self.id = id
+        self.id = id_
         # This is the real thing we need to make changes
         # We should get it on callback
         self.twil_sid = sid
@@ -141,7 +142,6 @@ class TwilConference:
                 to=number_to_call.e164,
                 from_=from_number.e164
             )
-
 
     def twiml_xml(self, number_calling: PhoneNumber) -> VoiceResponse:
         response = VoiceResponse()
@@ -215,7 +215,7 @@ async def new_conference() -> TwilConference:
 #         media_url=media_url
 #     )
 
-async def send_sms(from_number, to_number, message, media_url=values.unset):
+async def send_sms(from_number:PhoneNumber, to_number:PhoneNumber, message, media_url=values.unset):
     global Client
     global _twil_lock
 
@@ -223,8 +223,8 @@ async def send_sms(from_number, to_number, message, media_url=values.unset):
     try:
         _twilio_client.messages.create(
             body=message,
-            from_=from_number,
-            to=to_number,
+            from_=from_number.e164,
+            to=to_number.e164,
             media_url=media_url
         )
         # await _twil_text(from_number, to_number, message, media_url)

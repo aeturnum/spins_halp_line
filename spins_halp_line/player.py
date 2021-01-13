@@ -3,8 +3,9 @@ import json
 from typing import Any, Dict, Optional, List, Union
 from copy import deepcopy
 
-from spins_halp_line.services.redis import new_redis
-from spins_halp_line.util import Logger, PhoneNumber
+from spins_halp_line.util import Logger
+from spins_halp_line.resources.redis import new_redis
+from spins_halp_line.resources.numbers import PhoneNumber
 from spins_halp_line.errors import DataIntegrityError
 from spins_halp_line.constants import Script_New_State, Script_End_State
 

@@ -4,7 +4,8 @@ from copy import deepcopy
 
 from twilio.twiml.voice_response import VoiceResponse
 
-from spins_halp_line.util import Logger, Snapshot, PhoneNumber
+from spins_halp_line.util import Logger, Snapshot
+from spins_halp_line.resources.numbers import PhoneNumber
 from spins_halp_line.twil import TwilRequest
 from spins_halp_line.constants import (
     Script_Any_Number

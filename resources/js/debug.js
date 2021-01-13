@@ -1,18 +1,20 @@
 function displayThisJson(data, player_id) {
 	return () => {
 		let this_data = data[player_id];
-		const tree = JsonView.renderJSON(this_data, document.querySelector('#json'));
+		let domNode = document.querySelector('#json');
+		domNode.innerHTML = ""; // clear old data if it exists
+		const tree = JsonView.renderJSON(this_data, domNode);
     	JsonView.expandChildren(tree); // Expand tree after rendering
 	}
 }
 
 function deletePlayer(friendly_key) {
 	return () => {
-	    fetch(`/players/${friendly_key}`, {method: 'DELETE'})
+	    fetch(`/debug/players/${friendly_key}`, {method: 'DELETE'})
             .then(res => {
                 if (res.ok) {
                     // redo setup
-                    fetch('/players').then(res => res.json()).then(data => setupTable(data));
+                    fetch('/debug/players').then(res => res.json()).then(data => setupTable(data));
                 } else {
                     res.text().then(text => console.log(`Delete Failed: ${text}`));
                 }
@@ -54,10 +56,11 @@ function setupTableRow(key, table, data) {
 
 function setupTable(data) {
 	let table = u("#players").nodes[0];
+	table.innerHTML = ""; // Delete anything that was there before
     setupTableHead(table);
     for (let key of Object.keys(data)) {
     	setupTableRow(key, table, data);
     }
 }
 
-fetch('/players').then(res => res.json()).then(data => setupTable(data));
+fetch('/debug/players').then(res => res.json()).then(data => setupTable(data));
