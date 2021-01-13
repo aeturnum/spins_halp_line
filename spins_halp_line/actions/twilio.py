@@ -10,6 +10,7 @@ from twilio.base import values
 
 from ..constants import Credentials, Root_Url
 from spins_halp_line.resources.redis import new_redis
+from spins_halp_line.media.common import Conference_Hold_Music
 from spins_halp_line.util import LockManager
 from ..resources.numbers import PhoneNumber
 
@@ -150,6 +151,7 @@ class TwilConference:
             f'{self.id}',
             status_callback_event=self._callbacks,
             status_callback=self.status_callback,
+            wait_url=Conference_Hold_Music.url,
             # This argument is not documented in the SDK, but it does work in the generated XML
             participant_label=number_calling.e164
         )
