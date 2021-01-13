@@ -17,6 +17,7 @@ redio = "^0.5.2"
 pytest-trio = "^0.7.0"
 pudb = "^2019.2"
 pytest-pudb = "^0.7.0"
+phonenumbers = "^8.12.16"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

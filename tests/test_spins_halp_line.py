@@ -2,6 +2,7 @@ from typing import Optional
 
 from spins_halp_line.stories.story_objects import Script, Scene, Room, SceneAndState, RoomContext
 from spins_halp_line.player import ScriptInfo, Player
+from spins_halp_line.util import PhoneNumber
 from spins_halp_line.constants import (
     Script_New_State,
     Script_Any_Number,
@@ -11,9 +12,9 @@ from spins_halp_line.constants import (
 
 class MockPlayer(Player):
 
-    def __init__(self):
+    def __init__(self, caller):
         self.scripts = {}
-        self._number = "testing"
+        self.number = PhoneNumber(caller)
 
     def set_script(self, script_name: str, info: ScriptInfo) -> None:
         self.scripts[script_name] = info
@@ -25,11 +26,11 @@ class MockPlayer(Player):
 class MockRequest:
 
     @staticmethod
-    def make(player, caller, called = "", digits = ""):
+    def make(player, called = "", digits = ""):
         return MockRequest(
             player,
             {
-                "From": caller,
+                "From": player.number.e164,
                 "Called": called,
                 "Digits": digits
             }
@@ -44,12 +45,16 @@ class MockRequest:
         return self._data
 
     @property
-    def caller(self):
-        return self.data.get("From", None)
+    def caller(self) -> Optional[PhoneNumber]:
+        if "From" in self.data:
+            return PhoneNumber(self.data.get("From"))
+        return None
 
     @property
-    def num_called(self):
-        return self.data.get("Called", None)
+    def num_called(self) -> Optional[PhoneNumber]:
+        if "Called" in self.data:
+            return PhoneNumber(self.data.get("Called"))
+        return None
 
     @property
     def digits(self):
@@ -138,10 +143,10 @@ async def test_scene():
 
     s = one_room(expected)
 
-    caller = "+1234"
-    player = MockPlayer()
+    caller = "+12223334444"
+    player = MockPlayer(caller)
 
-    req = MockRequest.make(player, caller, "")
+    req = MockRequest.make(player, "+15556667777")
 
     # import pudb.b
     result = await s.play(req)
@@ -152,17 +157,17 @@ async def test_scene():
 async def test_maze():
     s = basic_maze(1, 2, 3)
 
-    caller = "+1234"
-    player = MockPlayer()
+    caller = "+12223334444"
+    player = MockPlayer(caller)
 
-    req = MockRequest.make(player, caller)
+    req = MockRequest.make(player, "+15556667777")
 
     # import pudb.b
     result = await s.play(req)
     assert result == 1
     assert player.scripts[s.name].state != Script_End_State
 
-    req = MockRequest.make(player, caller, digits="1")
+    req = MockRequest.make(player, "+15556667777", digits="1")
     result = await s.play(req)
     # check that we went to room two
     assert result == 2
@@ -171,7 +176,7 @@ async def test_maze():
     # back to room one
     assert result == 1
     assert player.scripts[s.name].state != Script_End_State
-    req = MockRequest.make(player, caller, digits="6")
+    req = MockRequest.make(player, "+15556667777", digits="6")
     result = await s.play(req)
     # to final room
     assert result == 3
@@ -185,10 +190,10 @@ async def test_two_rooms():
 
     s = two_room(expected1, expected2)
 
-    caller = "+1234"
-    player = MockPlayer()
+    caller = "+12223334444"
+    player = MockPlayer(caller)
 
-    req = MockRequest.make(player, caller, "")
+    req = MockRequest.make(player, "+15556667777")
 
     # import pudb.b
     result = await s.play(req)
@@ -200,10 +205,10 @@ async def test_two_rooms():
 async def test_state():
     s = one_room("")
 
-    caller = "+1234"
-    player = MockPlayer()
+    caller = "+12223334444"
+    player = MockPlayer(caller)
 
-    req = MockRequest.make(player, caller, "")
+    req = MockRequest.make(player, "+15556667777")
 
     # import pudb.b
     await s.play(req)

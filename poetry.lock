@@ -268,6 +268,14 @@ pyparsing = ">=2.0.2"
 six = "*"
 
 [[package]]
+name = "phonenumbers"
+version = "8.12.16"
+description = "Python version of Google's common library for parsing, formatting, storing and validating international phone numbers."
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "pluggy"
 version = "0.13.1"
 description = "plugin and hook calling mechanisms for python"
@@ -604,7 +612,7 @@ h11 = ">=0.8.1"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "0355e946a380e78f4f21871ada326a397050d479f5480098ac69590ba320be2d"
+content-hash = "7066fa85575a49d5ce9366ea52e01832333b93d7e12534febe2cbc047c567370"
 
 [metadata.files]
 aiofiles = [
@@ -789,6 +797,10 @@ outcome = [
 packaging = [
     {file = "packaging-20.4-py2.py3-none-any.whl", hash = "sha256:998416ba6962ae7fbd6596850b80e17859a5753ba17c32284f67bfff33784181"},
     {file = "packaging-20.4.tar.gz", hash = "sha256:4357f74f47b9c12db93624a82154e9b120fa8293699949152b22065d556079f8"},
+]
+phonenumbers = [
+    {file = "phonenumbers-8.12.16-py2.py3-none-any.whl", hash = "sha256:56ad29025b8f885945506350b06d77afbc506c5463141d77a5df767280a7ee0b"},
+    {file = "phonenumbers-8.12.16.tar.gz", hash = "sha256:a820ab08c980ef24a2d2a1ead4f8d7016fdf008e484d1aecf7ff0b32cc475e16"},
 ]
 pluggy = [
     {file = "pluggy-0.13.1-py2.py3-none-any.whl", hash = "sha256:966c145cd83c96502c3c3868f50408687b38434af77734af1e9ca461a4081d2d"},

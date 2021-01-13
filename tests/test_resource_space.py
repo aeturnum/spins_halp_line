@@ -1,4 +1,4 @@
-from spins_halp_line.resource_space import RSResource
+from spins_halp_line.media.resource_space import RSResource
 
 
 async def test_search():

@@ -1,9 +1,11 @@
 import logging
-from typing import Union, Optional, IO
+from typing import Union, Optional, IO, Any
+from copy import deepcopy
 
 import trio
 
 import hypercorn.logging as hyplog
+import phonenumbers
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -66,7 +68,6 @@ class Logger(object):
     def __str__(self):
         return str(self.__class__)
 
-
 async def pretty_print_request(r, label=""):
     s = []
     content_type = r.headers.get("Content-Type", None)
@@ -97,7 +98,6 @@ async def pretty_print_request(r, label=""):
 
     print("\n".join(s))
 
-
 class SynchedCache(Logger):
 
     def __init__(self):
@@ -116,52 +116,85 @@ class SynchedCache(Logger):
             return value
 
 
-# Todo: Maybe finish this class, but only if synched cache doesn't work out
-#
-# class TrioRWLock:
-#     _reader_max = 10
-#
-#     def __int__(self):
-#         self.read_lock = trio.Semaphore(self._reader_max) # 10 readers
-#         self.write_lock = trio.Lock()
-#         self.writer_waiting: Optional[trio.Event] = None
-#         self.reading_tasks = {}
-#
-#
-#     async def rlock(self):
-#         our_task = trio.lowlevel.current_task()
-#         # increment depth, don't lock again
-#         if our_task in self.reading_tasks:
-#             self.reading_tasks[our_task] += 1
-#             return
-#
-#         # we might need to wait for a write to finish
-#         if self.writer_waiting:
-#             # the write will set this event when it finishes
-#             await self.writer_waiting.wait()
-#
-#         # block if a write is happening
-#         await self.write_lock.acquire()
-#         await self.write_lock.release()
-#         # aquire lock
-#         await self.read_lock.acquire()
-#         # set count to 1
-#         self.reading_tasks[our_task] = 1
-#
-#     async def un_rlock(self):
-#         our_task = trio.lowlevel.current_task()
-#         if self.reading_tasks[our_task] > 1:
-#             # undo repeated read lock
-#             self.reading_tasks[our_task] -= 1
-#         else:
-#             await self.read_lock.release()
-#
-#     async def wlock(self):
-#         if self.read_lock.value < self._reader_max:
-#             self.worker_waiting = trio.Event()
-#
-#         await self.write_lock.acquire()
-#         while
-#
-#     async def un_wlock(self):
-#         pass
+# Helper class to ease the demands on trio.Lock state tracking
+class LockManager(Logger):
+
+    def __init__(self, lock, already_locked = False):
+        super(LockManager, self).__init__()
+
+        self.lock : trio.Lock = lock
+        self.expect_locked = already_locked
+
+    def __enter__(self):
+        raise NotImplementedError("Lock Manager only manages async locks!")
+
+    async def __aenter__(self):
+        if not self.expect_locked:
+            await self.lock.acquire()
+        else:
+            if not self.lock.locked():
+                raise ValueError("Locked method called as if lock was acquired, but it was not.")
+
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        if not self.expect_locked:
+            self.lock.release()
+
+# Helper class to restore a reference to a previous set of values (used to create psudo-transactions)
+class Snapshot:
+    def __init__(self, snap_of: Any):
+        self._ref = snap_of
+        # todo: This can cause potential problems for references to nested items in the data structure.
+        # todo: I.e. if you have this setup:   {a: {b: {c: "d"}}}}
+        # todo: and you have a reference to b, here/\
+        # todo: restoring a snapshot will mean that reference is pointed to a data structure that doesn't exist because we did \
+        # todo: a deep copy.
+        self._snap = deepcopy(snap_of)
+
+    def restore(self):
+        for key, value in vars(self._snap).items():
+            setattr(self._ref, key, value)
+
+# Helper class to transform numbers
+class PhoneNumber:
+
+    def __init__(self, number: Union[str, int, 'PhoneNumber']):
+        if isinstance(number, PhoneNumber):
+            # This is to allow us to construct PhoneNumbers everywhere and not worry about nesting
+            self._e164 = number._e164
+        else:
+            self._e164 = self._parse(number)
+
+    # This is a rough, hand-rolled method for dealing with numbers
+    def _parse(self, number) -> phonenumbers.PhoneNumber:
+        if isinstance(number, int):
+            number = str(number)
+
+        try:
+            # check for a clean e164
+            number = phonenumbers.parse(number)
+        except phonenumbers.phonenumberutil.NumberParseException:
+            # if this throws just let it fly
+            number = phonenumbers.parse("+1" + number)
+
+
+
+        return number
+
+    # Used for twilio purposes
+    @property
+    def e164(self):
+        return phonenumbers.format_number(self._e164, phonenumbers.PhoneNumberFormat.E164)
+
+    @property
+    def friendly(self):
+        if self._e164.country_code == 1:
+            # If in the US or Canada, just do national
+            return phonenumbers.format_number(self._e164, phonenumbers.PhoneNumberFormat.NATIONAL)
+        else:
+            # Otherwise international
+            return phonenumbers.format_number(self._e164, phonenumbers.PhoneNumberFormat.INTERNATIONAL)
+
+    def __str__(self):
+        return self.friendly

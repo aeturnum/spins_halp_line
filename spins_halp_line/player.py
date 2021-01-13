@@ -1,33 +1,12 @@
 from dataclasses import dataclass, field, asdict, fields as datafields
 import json
 from typing import Any, Dict, Optional, List, Union
+from copy import deepcopy
 
-import redio
-
-from spins_halp_line.util import Logger
+from spins_halp_line.services.redis import new_redis
+from spins_halp_line.util import Logger, PhoneNumber
+from spins_halp_line.errors import DataIntegrityError
 from spins_halp_line.constants import Script_New_State, Script_End_State
-
-
-# holds the class that manages the player info in redis
-# todo: Consider using a single coroutine to do all loading and storing of players so that
-# todo: we can detect if a player is getting race condition'd (i.e. there are two copies of them)
-# todo: out and they might get squashed
-
-
-def redis_factory() -> redio.Redis:
-    return redio.Redis("redis://localhost/")
-
-
-# global redis connection factory
-_redis = None
-
-
-def _get_redis():
-    global _redis
-    if _redis is None:
-        _redis = redis_factory()
-
-    return _redis()
 
 
 @dataclass
@@ -152,12 +131,13 @@ class Player(Logger):
     scripts_key = 'scripts'
 
     @classmethod
-    async def _get_player_keys(cls) -> List[str]:
+    async def _get_player_keys(cls, db = None) -> List[str]:
         # This is a bad method, but I'm not sure how to make it better. There is no documentation in redio about
         # how to specify a filter in scan (which redis supports but we'd need to format properly) and, in any
-        # case, a filter would still get all keys first but only give us some of them. Hopefully a minor
+        # case, a filter would still get all keys first but only give friendly some of them. Hopefully a minor
         # optimization?
-        db = _get_redis()
+        if db is None:
+            db = new_redis()
         cursor = "0"
         players = []
         while True:
@@ -176,8 +156,8 @@ class Player(Logger):
 
     @classmethod
     async def get_all_json(cls) -> dict:
-        db = _get_redis()
-        players = await cls._get_player_keys()
+        db = new_redis()
+        players = await cls._get_player_keys(db)
         player_dicts = await db.mget(" ".join(players)).autodecode
         return {
             player: player_dicts[idx] for idx, player in enumerate(players)
@@ -185,18 +165,18 @@ class Player(Logger):
 
     @classmethod
     async def reset(cls, plr):
-        db = _get_redis()
+        db = new_redis()
         return await db.delete(plr)
 
     @classmethod
     def from_number(cls, number: Union[int, str]) -> str:
         return f'plr:+{number}'
 
-    def __init__(self, number):
+    def __init__(self, number: Union[str, PhoneNumber]):
         super(Player, self).__init__()
         global _redis
-        self._number = number
-        self._db = _get_redis()
+        self.number = PhoneNumber(number)
+        self._db = new_redis()
         self._data = {}
         # self.info: Optional[PlayerInfo] = None
         self.scripts: Optional[Dict[str, ScriptInfo]] = None
@@ -229,7 +209,7 @@ class Player(Logger):
 
     @property
     def _key(self):
-        return f'plr:{self._number}'
+        return f'plr:{self.number.e164}'
 
     async def save(self):
         # always save damnit
@@ -253,4 +233,4 @@ class Player(Logger):
         return self.scripts.get(script_name, None)
 
     def __str__(self):
-        return f"Player[{self._number}]"
+        return f"Plr[{self.number.friendly}]"

@@ -18,6 +18,9 @@ from spins_halp_line.stories.story_objects import Script, confused_response
 from spins_halp_line.stories.shipwreck_adventure import adventure
 from spins_halp_line.events import event_websocket, send_event
 from spins_halp_line.player import Player
+from spins_halp_line.actions.twilio import (
+    Conf_Twiml_Path, Conf_Status_Path, conferences, TwilConference
+)
 
 Script.add_script(adventure)
 
@@ -102,6 +105,42 @@ async def main_number():
     await req.player.save()
 
     return t_resp(response)
+
+#   _____             __                                _____      _ _ _                _
+#  / ____|           / _|                              / ____|    | | | |              | |
+# | |     ___  _ __ | |_ ___ _ __ ___ _ __   ___ ___  | |     __ _| | | |__   __ _  ___| | _____
+# | |    / _ \| '_ \|  _/ _ \ '__/ _ \ '_ \ / __/ _ \ | |    / _` | | | '_ \ / _` |/ __| |/ / __|
+# | |___| (_) | | | | ||  __/ | |  __/ | | | (_|  __/ | |___| (_| | | | |_) | (_| | (__|   <\__ \
+#  \_____\___/|_| |_|_| \___|_|  \___|_| |_|\___\___|  \_____\__,_|_|_|_.__/ \__,_|\___|_|\_\___/
+#
+
+# This is POST be default and can be set to get but who cares, do both
+@app.route(Conf_Twiml_Path, methods=["GET", "POST"])
+async def get_conf_connection_twil(c_number):
+    req = TwilRequest(request)
+    await req.load()
+
+    confs = conferences()
+
+    for conf in confs:
+        if conf.matches(c_number):
+            return conf.twiml_xml(req.num_called)
+
+@app.route(Conf_Status_Path, methods=["GET", "POST"])
+async def conf_status_update(c_number):
+    req = TwilRequest(request)
+    await req.load()
+
+    confs = conferences()
+
+    # todo: Need to decide if we want to persist conferences in redis or not
+    # todo: see TwilConference.handle_callback
+
+    # just 200-ok them
+    return ""
+
+
+
 #
 #  _____       _                       _               ______           _             _       _
 # |  __ \     | |                     (_)             |  ____|         | |           (_)     | |
@@ -151,7 +190,6 @@ async def delete_player(p_num):
 #                                   | |
 #                                   |_|
 #
-
 
 # https://support.glitch.com/t/tutorial-how-to-auto-update-your-project-with-github/8124
 @app.route("/git", methods=['POST'])

@@ -2,6 +2,7 @@ from quart import Response, Request
 from typing import Optional
 
 from spins_halp_line.player import Player
+from spins_halp_line.util import PhoneNumber
 
 #
 # POST http://drex.space/tipline/start
@@ -75,12 +76,16 @@ class TwilRequest(object):
         return self._data
 
     @property
-    def caller(self):
-        return self.data.get("From", None)
+    def caller(self) -> Optional[PhoneNumber]:
+        if "From" in self.data:
+            return PhoneNumber(self.data.get("From"))
+        return None
 
     @property
-    def num_called(self):
-        return self.data.get("Called", None)
+    def num_called(self) -> Optional[PhoneNumber]:
+        if "Called" in self.data:
+            return PhoneNumber(self.data.get("Called"))
+        return None
 
     @property
     def digits(self):
@@ -133,7 +138,7 @@ class TwilRequest(object):
         if self._loaded:
             sigil = "X"
             if self.caller:
-                sigil = self.caller
+                sigil = self.caller.friendly
 
         return f'TR[{sigil}]'
 

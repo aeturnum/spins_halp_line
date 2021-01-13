@@ -1,15 +1,17 @@
 from typing import List, Optional, Dict, Union, Tuple
 from dataclasses import dataclass
+from copy import deepcopy
 
 from twilio.twiml.voice_response import VoiceResponse
 
-from spins_halp_line.util import Logger
+from spins_halp_line.util import Logger, Snapshot, PhoneNumber
 from spins_halp_line.twil import TwilRequest
 from spins_halp_line.constants import (
     Script_Any_Number
 )
 from spins_halp_line.player import SceneInfo, ScriptInfo, RoomInfo
 from spins_halp_line.events import send_event
+from spins_halp_line.errors import StoryNavigationException
 
 
 # This file contains the three-tiered structure for managing phone-based experiences
@@ -208,7 +210,17 @@ class Scene(Logger):
         self.d(f"room queue: {room_queue}")
 
         # remove first member of the room_queue and get the room it references
-        room = self._name_to_room(room_queue.pop(0))
+        try:
+            room = self._name_to_room(room_queue.pop(0))
+        except IndexError:
+            self.e(f"Tried to pop from empty room queue! Replying last room")
+            try:
+                self._name_to_room(scene_state.prev_room)
+            except Exception as e:
+                raise StoryNavigationException("Could not get next room", e)
+
+        except Exception as e:
+            raise StoryNavigationException("Could not get next room", e)
 
         # get room state
         room_state = scene_state.room_state(room.Name)
@@ -217,25 +229,34 @@ class Scene(Logger):
         context = RoomContext(script_state, scene_state, room_state)
 
         await send_event(f"{request.player} entering {room}!")
-        twilio_action = await room.action(context)
+        try:
+            twilio_action = await room.action(context)
+        except Exception as e:
+            raise StoryNavigationException("Failed while trying to take room action", e)
 
-        # post room updates
-        # I am now paranoid about state not getting written and am done fucking around
-        script_state, scene_state, room_state = context._pass_back_changes(
-            script_state,
-            scene_state,
-            room_state,
-            spoil_state=True # the room state stops being fresh now
-        )
+        # backup
+        script_state_snap = Snapshot(script_state)
+        try:
+            # post room updates
+            # I am now paranoid about state not getting written and am done fucking around
+            script_state, scene_state, room_state = context._pass_back_changes(
+                script_state,
+                scene_state,
+                room_state,
+                spoil_state=True # the room state stops being fresh now
+            )
 
-        scene_state.rooms_visited.append(room.Name)
-        self.d(f"play({request}): state.rooms_visited: {scene_state.rooms_visited}")
-        # update room queue
-        scene_state.room_queue = room_queue
+            scene_state.rooms_visited.append(room.Name)
+            self.d(f"play({request}): state.rooms_visited: {scene_state.rooms_visited}")
+            # update room queue
+            scene_state.room_queue = room_queue
 
-        # more paranoia about failures to write
-        scene_state.room_states[room.Name] = room_state
-        script_state.scene_states[self.Name] = scene_state
+            # more paranoia about failures to write
+            scene_state.room_states[room.Name] = room_state
+            script_state.scene_states[self.Name] = scene_state
+        except Exception as e:
+            script_state_snap.restore() # undo any changes, though we generally won't save anything
+            raise StoryNavigationException("Failed while trying to take room action", e)
 
         return twilio_action
 
@@ -397,15 +418,15 @@ class Script(Logger):
 
         return result
 
-    def _get_scene_state(self, info: ScriptInfo, number_called: str) -> Optional[SceneAndState]:
-        self.d(f'_get_scene_set(info, {number_called})')
+    def _get_scene_state(self, info: ScriptInfo, number_called: PhoneNumber) -> Optional[SceneAndState]:
+        self.d(f'_get_scene_set(info, {number_called.e164})')
         current_structure = self.structure.get(info.state, {})
 
-        if number_called in current_structure:
-            self.d(f'_get_scene_set(info, {number_called}): Specific number matched')
-            return current_structure.get(number_called)
+        if number_called.e164 in current_structure:
+            self.d(f'_get_scene_set(info, {number_called.e164}): Specific number matched')
+            return current_structure.get(number_called.e164)
         elif Script_Any_Number in current_structure:
-            self.d(f'_get_scene_set(info, {number_called}): Matching wildcard')
+            self.d(f'_get_scene_set(info, {number_called.e164}): Matching wildcard')
             return current_structure.get(Script_Any_Number)
 
         return None
