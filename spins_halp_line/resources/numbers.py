@@ -120,7 +120,7 @@ class NumberLibrary:
 
         candidates = self.master_index
         for cap in capabilities:
-            candidates = filter(lambda num: num in self.capabilities[cap], candidates)
+            candidates = [c for c in candidates if c in self.capabilities[cap]]
 
         return random.choice(candidates)
 

@@ -51,7 +51,7 @@ from spins_halp_line.resources.numbers import PhoneNumber
 class TwilRequest(object):
 
     def __init__(self, request: Request):
-        self.req = request
+        self.req: Request = request
         self._loaded = False
         self._data = {}
         self.player: Optional[Player] = None
@@ -62,7 +62,7 @@ class TwilRequest(object):
                 if 'x-www-form-urlencoded' in self.content_type:
                     self._data = await self.req.form
                 elif 'json' in self.content_type:
-                    self._data = await self.req.form
+                    self._data = await self.req.get_json()
 
             if self.caller:
                 self.player = Player(self.caller)

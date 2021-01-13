@@ -2,7 +2,7 @@ import pytest
 import trio_asyncio
 
 from spins_halp_line.actions import twilio
-from spins_halp_line.resources.numbers import PhoneNumber
+from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 
 
 @pytest.mark.trio
@@ -19,3 +19,9 @@ async def test_text():
 async def test_conf():
     conf = await twilio.new_conference()
     print(conf.twiml_xml(PhoneNumber("+14156864014")))
+
+@pytest.mark.trio
+async def test_number_index():
+    await Global_Number_Library.load()
+
+    print(Global_Number_Library.random())

@@ -48,7 +48,9 @@ _logger = None
 def get_logger():
     global _logger
     if _logger is None:
-        formatter = logging.Formatter('[%(asctime)s.%(msecs)03d]%(message)s', datefmt="%d|%H:%M:%S")
+        # Permanent note to self: Syslog already has timestamps ya git. Stop adding them back in!
+        # formatter = logging.Formatter('[%(asctime)s.%(msecs)03d]%(message)s', datefmt="%d|%H:%M:%S")
+        formatter = logging.Formatter('%(message)s')
 
         stream_formatter = logging.StreamHandler()
         stream_formatter.setFormatter(formatter)

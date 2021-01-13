@@ -1,10 +1,10 @@
 [
   {
     "number": "+15102567675",
-    "capabilities": ["text", "sms", "mms"]
+    "capabilities": ["voice", "sms", "mms"]
   },
   {
     "number": "+15102567676",
-    "capabilities": ["text", "sms", "mms"]
+    "capabilities": ["voice", "sms", "mms"]
   }
 ]
