@@ -156,6 +156,7 @@ class TwilConference:
             participant_label=number_calling.e164
         )
         response.append(dial)
+        print(response)
         return response
 
 def conferences() -> List[TwilConference]:
