@@ -30,7 +30,7 @@ Conf_Status_Path = "/conf/status/<c_number>"
 # This exists because we need to keep track of conferences and how they are progressing
 class TwilConference:
 
-    _callbacks = " ".join(['start', 'end', 'leave'])
+    _callbacks = " ".join(['start', 'end', 'leave', 'join'])
 
     @classmethod
     async def _load_conferences(cls, locked=False):
