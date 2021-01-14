@@ -125,7 +125,7 @@ async def get_conf_connection_twil(c_number):
     confs = conferences()
 
     for conf in confs:
-        if conf.matches(c_number):
+        if conf == c_number:
             return t_resp(conf.twiml_xml(req.num_called))
 
 @app.route(Conf_Status_Path, methods=["GET", "POST"])
@@ -137,7 +137,7 @@ async def conf_status_update(c_number):
     confs = conferences()
 
     # todo: Need to decide if we want to persist conferences in redis or not
-    # todo: see TwilConference.handle_callback
+    # todo: see TwilConference.handle_conf_event
 
     # just 200-ok them
     return ""

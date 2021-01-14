@@ -19,3 +19,9 @@ def new_redis():
         _redis = redis_factory()
 
     return _redis()
+
+
+async def delete_key(key):
+    db = new_redis()
+
+    await db.delete(key)

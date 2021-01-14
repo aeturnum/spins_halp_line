@@ -3,7 +3,6 @@ from typing import Union, Optional, IO, Any
 from copy import deepcopy
 
 import trio
-
 import hypercorn.logging as hyplog
 
 logging.basicConfig(level=logging.DEBUG)

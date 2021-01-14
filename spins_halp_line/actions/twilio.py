@@ -1,5 +1,6 @@
 import json
-from typing import List, Union
+from typing import List, Union, Optional
+from datetime import datetime
 
 import trio
 from twilio import rest
@@ -11,7 +12,7 @@ from twilio.base import values
 from ..constants import Credentials, Root_Url
 from spins_halp_line.resources.redis import new_redis
 from spins_halp_line.media.common import Conference_Hold_Music
-from spins_halp_line.util import LockManager
+from spins_halp_line.util import LockManager, Logger
 from ..resources.numbers import PhoneNumber
 
 _twilio_client: rest.Client = rest.Client(Credentials["twilio"]["sid"], Credentials["twilio"]["token"])
@@ -28,7 +29,7 @@ Conf_Status_Path = "/conf/status/<c_number>"
 
 
 # This exists because we need to keep track of conferences and how they are progressing
-class TwilConference:
+class TwilConference(Logger):
 
     _callbacks = " ".join(['start', 'end', 'leave', 'join'])
 
@@ -47,9 +48,13 @@ class TwilConference:
     # it will not be a problem because this is writing to the persistant database and those writes should be
     # ordered by redio
     @classmethod
-    async def _save_conference_list(cls, confs: List['TwilConference']):
+    async def _save_conference_list(cls, locked=False):
+        global _conferences
+        global _conference_lock
         db = new_redis()
-        await db.set(_conference_key, json.dumps([c.to_redis() for c in confs]))  # list of dict
+
+        async with LockManager(_conference_lock, locked):
+            await db.set(_conference_key, json.dumps([c.to_redis() for c in _conferences]))  # list of dict
 
     @classmethod
     async def from_redis(cls, saved_data, locked=False):
@@ -62,7 +67,14 @@ class TwilConference:
                 # keep up gid as conference increases
                 _last_conference = int_id
 
-            return TwilConference(saved_data['id'], saved_data['participants'], saved_data['sid'])
+            id_ = saved_data['id']
+            participants = [PhoneNumber(p) for p in saved_data['participants']]
+            sid = saved_data.get('sid', "")
+            started = saved_data.get('started', None)
+            if started:
+                started = datetime.fromisoformat(started)
+
+            return TwilConference(id_, participants, sid, started)
 
     @classmethod
     async def create(cls, locked=None) -> 'TwilConference':
@@ -75,31 +87,21 @@ class TwilConference:
 
             return TwilConference(new_id)
 
-    @classmethod
-    async def handle_callback(cls, conf_id, args, locked=False) -> str:
-        global _conference_lock
-        global _conferences
-
-        async with LockManager(_conference_lock, locked):
-            for conf in _conferences:
-                if conf.matches(conf_id):  # use function to handle type problems
-                    if conf.twil_sid is None:
-                        conf.twil_sid = args.get('ConferenceSid')
-                    # event = args.get('StatusCallbackEvent')
-
-                    await cls._save_conference_list(_conferences)
-
-        return ""
-
-    def __init__(self, id_, participants=None, sid=None):
+    def __init__(self, id_, participants=None, sid=None, started=None):
+        super(TwilConference, self).__init__()
         if not participants:
             participants = []
 
-        self.id = id_
+        if not sid:
+            sid = ""
+
+
+        self.id: int = id_
         # This is the real thing we need to make changes
         # We should get it on callback
-        self.twil_sid = sid
-        self.participants = participants
+        self.twil_sid: str = sid
+        self.participants: List[PhoneNumber] = participants
+        self.started: Optional[datetime] = started
 
     @property
     def status_callback(self):
@@ -109,33 +111,86 @@ class TwilConference:
     def twiml_callback(self):
         return '/'.join([Root_Url, 'conf', 'twiml', str(self.id)])
 
-    def matches(self, potential_id: Union[str, int]):
-        if not isinstance(potential_id, int):
+    def __eq__(self, other):
+        if isinstance(other, TwilConference):
+            return self.id == other.id
+        elif isinstance(other, str):
             try:
-                potential_id = int(potential_id)
-            except:
-                # we don't care
+                return self.id == int(other)
+            except Exception:
+                # fall out to default
                 pass
+        elif isinstance(other, int):
+            return self.id == other
 
-        # should be fine if we pass a string int, otherwise should cleanly return false
-        return potential_id == self.id
+        return False
 
     def to_redis(self):
         return {
             'id': self.id,
             'participants': self.participants,
-            'sid': self.twil_sid
+            'sid': self.twil_sid,
+            'started': self.started.isoformat()
         }
 
-    async def _add_through_conf(self, from_number: PhoneNumber, number_to_call: PhoneNumber):
-        pass
+
+# Headers:
+#   [...]
+# Body:
+#   Coaching: false
+#   FriendlyName: 2
+#   ParticipantLabel: +14156864014
+#   EndConferenceOnExit: false
+#   StatusCallbackEvent: participant-leave
+#   Timestamp: Thu, 14 Jan 2021 00:25:05 +0000
+#   StartConferenceOnEnter: true
+#   AccountSid: AC7196e8082e73460f6c5c961109940e6d
+#   SequenceNumber: 1
+#   ConferenceSid: CF68a65a63fd20c14069a0ec784858ecb0
+#   CallSid: CA3dbed34340ac3d3f530a3d72468d91fb
+#   Hold: false
+#   Muted: false
+
+    # events:
+    # last-participant-left: conference over
+    # participant-leave: someone left
+    # conference-start: both people are in
+    async def handle_conf_event(self, body) -> str:
+        global _conference_lock
+        global _conferences
+
+        async with LockManager(_conference_lock):
+            dirty = False
+
+            # conf_name = body.get('FriendlyName')
+            participant = body.get('ParticipantLabel')
+            event_name = body.get('StatusCallbackEvent')
+            conf_sid = body.get('ConferenceSid')
+
+            self.d(f'{participant} triggered {event_name}')
+
+            if not self.twil_sid:
+                self.twil_sid = conf_sid
+                dirty = True
+
+            if participant not in self.participants:
+                # add a participant when we first see them in a callback
+                self.participants.append(PhoneNumber(participant))
+                dirty = True
+
+            if event_name == 'conference-start': # conference start, mark time
+                self.started = datetime.now()
+
+            if dirty:
+                await self._save_conference_list(True)
+
+        return ""
 
     async def add_participant(self, from_number: PhoneNumber, number_to_call: PhoneNumber):
-        if self.twil_sid:
-            return await self._add_through_conf(from_number, number_to_call)
-
         global _twil_lock
         global _twilio_client
+        global _conferences
+        global _conference_lock
 
         async with LockManager(_twil_lock):
             _twilio_client.calls.create(
@@ -143,6 +198,9 @@ class TwilConference:
                 to=number_to_call.e164,
                 from_=from_number.e164
             )
+
+        async with LockManager(_conference_lock):
+            await self._save_conference_list()
 
     def twiml_xml(self, number_calling: PhoneNumber) -> VoiceResponse:
         response = VoiceResponse()
@@ -156,12 +214,10 @@ class TwilConference:
             participant_label=number_calling.e164
         )
         response.append(dial)
-        print(response)
         return response
 
-def conferences() -> List[TwilConference]:
-    global _conferences
-    return _conferences
+    def __str__(self):
+        return f'Conf[{self.id}]'
 
 async def new_conference() -> TwilConference:
     global _conferences
@@ -172,8 +228,7 @@ async def new_conference() -> TwilConference:
 
     async with LockManager(_conference_lock):
         _conferences.append(new_conf)
-        print(_conferences)
-        await TwilConference._save_conference_list(_conferences)
+        await TwilConference._save_conference_list(True)
 
     return new_conf
 
@@ -218,18 +273,35 @@ async def new_conference() -> TwilConference:
 #         media_url=media_url
 #     )
 
-async def send_sms(from_number:PhoneNumber, to_number:PhoneNumber, message, media_url=values.unset):
-    global Client
-    global _twil_lock
+def _do_send_sms(client, frm:str, to:str, msg:str, m_url=values.unset):
+    client.messages.create(body=msg,from_=frm,to=to,media_url=m_url)
 
-    await _twil_lock.acquire()
-    try:
-        _twilio_client.messages.create(
-            body=message,
-            from_=from_number.e164,
-            to=to_number.e164,
-            media_url=media_url
+
+async def send_sms(
+        from_number:PhoneNumber,
+        to_number:PhoneNumber,
+        message:str,
+        media_url=values.unset,
+        client=None
+):
+    if client:
+        # used for error state where we send out texts to ourselves
+        _do_send_sms(
+            client,
+            from_number.e164,
+            to_number.e164,
+            message,
+            media_url
         )
-        # await _twil_text(from_number, to_number, message, media_url)
-    finally:
-        _twil_lock.release()
+    else:
+        global _twilio_client
+        global _twil_lock
+
+        async with LockManager(_twil_lock):
+            _do_send_sms(
+                _twilio_client,
+                from_number.e164,
+                to_number.e164,
+                message,
+                media_url
+            )

@@ -1,57 +1,76 @@
-from typing import List, Optional, Dict, Union, Tuple
+from typing import List, Optional, Dict, Union, Tuple, Callable
 from dataclasses import dataclass
-from copy import deepcopy
+import json
 
 from twilio.twiml.voice_response import VoiceResponse
+import trio
 
-from spins_halp_line.util import Logger, Snapshot
+from spins_halp_line.util import Logger, Snapshot, LockManager
 from spins_halp_line.resources.numbers import PhoneNumber
 from spins_halp_line.twil import TwilRequest
+from spins_halp_line.resources.redis import new_redis
 from spins_halp_line.constants import (
     Script_Any_Number
 )
 from spins_halp_line.player import SceneInfo, ScriptInfo, RoomInfo
 from spins_halp_line.events import send_event
 from spins_halp_line.errors import StoryNavigationException
+from spins_halp_line.actions.errors import error_sms
 
+class StateShard(dict):
+    def __init__(self, state: dict, parent):
+        super(StateShard, self).__init__()
+        self.update(state)
+        self._parent = parent
+        # format
+        # {
+        #   'to': <key of the state that is getting the addition>
+        #   'value': <for lists, this is a new list to extend the old one with; for dicts it is a single value>
+        #   'key': <if changing a dict this is the key>
+        # }
+        self._changes = []
 
-# This file contains the three-tiered structure for managing phone-based experiences
-# That structure is as follows:
-# *Rooms*
-# Rooms are units of functionality that return a single twilio XML document. They respond
-# to a single REST request. They can handle an entire phone call, or they can handle a single
-# element of a multi-request interaction like a phone tree.
-# *Scenes*
-# Scenes contain one or more rooms. With the simplest structure, a scene contains a room and the
-# two are interchangible. Otherwise, Scenes contain helpers to select the appropriate room (i.e.
-# they take a dictionary to specify internal structure.
-# Scenes also have names and will manage state associated with each player. A player (a phone#) will
-# have a scenes key that contains any information about any scene. Thus scene names must be unique for
-# a given script.
-# *Script*
-# The script determines how the scenes are connected and what scenes a player has access to at any given
-# time. They will ensure that players don't get knocked off course by calling the wrong number.
+    def __setitem__(self, key, value):
+        raise ValueError("StateShard's cannot be changed - use append!")
 
+    def append(self, key, *vals):
+        if key not in self:
+            raise ValueError("Cannot append to things that aren't here!")
 
-#           _         _                  _     ____                    _____ _
-#     /\   | |       | |                | |   |  _ \                  / ____| |
-#    /  \  | |__  ___| |_ _ __ __ _  ___| |_  | |_) | __ _ ___  ___  | |    | | __ _ ___ ___  ___  ___
-#   / /\ \ | '_ \/ __| __| '__/ _` |/ __| __| |  _ < / _` / __|/ _ \ | |    | |/ _` / __/ __|/ _ \/ __|
-#  / ____ \| |_) \__ \ |_| | | (_| | (__| |_  | |_) | (_| \__ \  __/ | |____| | (_| \__ \__ \  __/\__ \
-# /_/    \_\_.__/|___/\__|_|  \__,_|\___|\__| |____/ \__,_|___/\___|  \_____|_|\__,_|___/___/\___||___/
-#
+        change = {
+            'to': key,
+        }
 
+        if isinstance(self[key], list):
+            change['value'] = []
+            for v in vals:
+                if isinstance(v, list):
+                    change['value'].extend(v)
+                else:
+                    change['value'].append(v)
 
-# todo: setup a system for getting a twilio callback and ending sessions cleanly.
-# todo: this probably involves a mode where we replay the last room with no number
-# todo: entered and also gracefully end calls.
+        if isinstance(self[key], dict):
+            if len(vals) != 2:
+                raise ValueError(f"When appending to a dictionary, you must supply a key and a value! Not {vals}")
+
+            change['key'] = vals[0]
+            change['value'] = vals[1]
+
+        self._changes.append(change)
+
+    async def integrate(self):
+        # this works because python just doesn't care about circular references
+        if self._changes:
+            await self._parent.integrate(self._changes)
+            self._changes = []
 
 class RoomContext(dict):
 
-    def __init__(self, script_state: ScriptInfo, scene_state: SceneInfo, room_state: RoomInfo):
+    def __init__(self, shard: StateShard, script_state: ScriptInfo, scene_state: SceneInfo, room_state: RoomInfo):
         # fill with our info
         super(RoomContext, self).__init__(room_state.data)
 
+        self.shard = shard
         self.script = script_state.data
         self.scene = scene_state.data
         self.choices = room_state.choices
@@ -66,6 +85,14 @@ class RoomContext(dict):
             scene_state: SceneInfo,
             room_state: RoomInfo,
             spoil_state: bool = True):
+        # In theory we should not need to pass the shard back here
+        # because its structure prevents any objects being replaced
+        # and so all of its references will be appropriate.
+        # We need to pass everything else back because the room could do something like:
+        # context.script = {}
+        # which would be a new dictionary; the old script_state.data would not be replaced
+        # unless we did it here
+
         script_state.data = self.script
         scene_state.data = self.scene
 
@@ -97,6 +124,37 @@ class RoomContext(dict):
         if self.state_is_new:
             fresh = "F"
         return f"RoomCtx[{self.state}|{fresh}]"
+
+# This file contains the three-tiered structure for managing phone-based experiences
+# That structure is as follows:
+# *Rooms*
+# Rooms are units of functionality that return a single twilio XML document. They respond
+# to a single REST request. They can handle an entire phone call, or they can handle a single
+# element of a multi-request interaction like a phone tree.
+# *Scenes*
+# Scenes contain one or more rooms. With the simplest structure, a scene contains a room and the
+# two are interchangible. Otherwise, Scenes contain helpers to select the appropriate room (i.e.
+# they take a dictionary to specify internal structure.
+# Scenes also have names and will manage state associated with each player. A player (a phone#) will
+# have a scenes key that contains any information about any scene. Thus scene names must be unique for
+# a given script.
+# *Script*
+# The script determines how the scenes are connected and what scenes a player has access to at any given
+# time. They will ensure that players don't get knocked off course by calling the wrong number.
+
+
+# todo: setup a system for getting a twilio callback and ending sessions cleanly.
+# todo: this probably involves a mode where we replay the last room with no number
+# todo: entered and also gracefully end calls.
+
+
+#           _         _                  _     ____                    _____ _
+#     /\   | |       | |                | |   |  _ \                  / ____| |
+#    /  \  | |__  ___| |_ _ __ __ _  ___| |_  | |_) | __ _ ___  ___  | |    | | __ _ ___ ___  ___  ___
+#   / /\ \ | '_ \/ __| __| '__/ _` |/ __| __| |  _ < / _` / __|/ _ \ | |    | |/ _` / __/ __|/ _ \/ __|
+#  / ____ \| |_) \__ \ |_| | | (_| | (__| |_  | |_) | (_| \__ \  __/ | |____| | (_| \__ \__ \  __/\__ \
+# /_/    \_\_.__/|___/\__|_|  \__,_|\___|\__| |____/ \__,_|___/\___|  \_____|_|\__,_|___/___/\___||___/
+#
 
 class Room(Logger):
     Name = "Base room"
@@ -196,14 +254,19 @@ class Scene(Logger):
 
         return done
 
-    async def play(self, request: TwilRequest, script_state: ScriptInfo):
+    async def play(self, shard: StateShard, request: TwilRequest, script_state: ScriptInfo):
         self.d(f'play({request}, {script_state})')
         scene_state = self._get_state(script_state)
         self.d(f'play({request}, {script_state}): {scene_state}')
         self.d(f"play({request}): state.rooms_visited: {scene_state.rooms_visited}")
 
         # tell the room what happened last time
-        script_state, scene_state = await self._notify_last_room_of_choice(request, script_state, scene_state)
+        script_state, scene_state = await self._notify_last_room_of_choice(
+            request,
+            shard,
+            script_state,
+            scene_state
+        )
 
         # handles either finishing the tunnel we are in or
         # picking a room based on choices.
@@ -216,7 +279,7 @@ class Scene(Logger):
         except IndexError:
             self.e(f"Tried to pop from empty room queue! Replying last room")
             try:
-                self._name_to_room(scene_state.prev_room)
+                room = self._name_to_room(scene_state.prev_room)
             except Exception as e:
                 raise StoryNavigationException("Could not get next room", e)
 
@@ -227,7 +290,7 @@ class Scene(Logger):
         room_state = scene_state.room_state(room.Name)
         self.d(f"room state: {room_state}")
         # make whole context object
-        context = RoomContext(script_state, scene_state, room_state)
+        context = RoomContext(shard, script_state, scene_state, room_state)
 
         await send_event(f"{request.player} entering {room}!")
         try:
@@ -277,6 +340,7 @@ class Scene(Logger):
     async def _notify_last_room_of_choice(
             self,
             request: TwilRequest,
+            shard: StateShard,
             script_state: ScriptInfo,
             our_info: SceneInfo) -> Tuple[ScriptInfo, SceneInfo]:
         # check that there's a previous room
@@ -286,7 +350,7 @@ class Scene(Logger):
             room_state = our_info.room_state(prev_room.Name)
 
             # room)state.choice will NOT have the new choice in it
-            context = RoomContext(script_state, our_info, room_state)
+            context = RoomContext(shard, script_state, our_info, room_state)
             await prev_room.new_player_choice(player_choice, context)
 
             script_state, our_info, room_state = context._pass_back_changes(script_state, our_info, room_state)
@@ -347,13 +411,115 @@ class SceneAndState:
     next_state: str
 
 
+# script
+#   \- state <-save on request / loaded on load-> redis
+#   	\- shard <-things added-> code
+# 	    |	\- integrate() -> send back to state if there are changes
+#    	\- reducer -> async task, run on end of request, that can remove items, state is locked while it runs
+
+
+class ScriptState(Logger):
+
+    _shard_class = StateShard
+
+    def __init__(self, initial_state: dict):
+        super(ScriptState, self).__init__()
+        self._key = None
+        self._state = {
+            'version': 0
+        }
+        self._state.update(initial_state)
+
+        self._lock = trio.Lock()
+
+    def set_key(self, key):
+        self._key = key
+
+    # This is a callback used by shards to 'ship' their changes back to the script state
+    async def integrate(self, changes):
+        self.d(f'Integrating: {changes}')
+        if changes == []:
+            return
+
+        async with LockManager(self._lock):
+            await self.sync_redis(True)
+            for change in changes:
+                to = change['to']
+                value = change['value']
+                if 'key' in change:
+                    self._state[to][change['key']] = value
+                else:
+                    self._state[to].extend(value)
+
+            await self.save_to_redis(True)
+
+    @property
+    def version(self):
+        return self._state['version']
+
+    @property
+    def shard(self):
+        return self._shard_class(self._state, self)
+
+    # This function is what should be overridden in child classes.
+    # Then the child class should be passed into the script when you construct it.
+    @staticmethod
+    async def do_reduce(state):
+        return state
+
+    # This is used to check if our version is out of date
+    async def sync_redis(self, locked=False):
+        db = new_redis()
+        async with LockManager(self._lock, already_locked=locked):
+            db_version = await db.get(self._key)
+            if db_version and db_version['version'] > self.version:
+                self._state = db_version
+
+    # This calls the static do_reduce that will make any changes to the state in a
+    # way that's safe and save the results into redis.
+    async def reduce(self):
+        # sync with DB
+        async with LockManager(self._lock):
+            await self.sync_redis(True)
+            self._state = await self.do_reduce(self._state)
+
+            await self.save_to_redis(True)
+
+    # save the state to redis, called frequently
+    async def save_to_redis(self, locked=False):
+        db = new_redis()
+        async with LockManager(self._lock, already_locked=locked):
+            db_data = await db.get(self._key).autodecode
+            if isinstance(db_data, dict):
+                if self._state == db_data:
+                    self.d(f'save_to_redis: no changes from version in database')
+                    # there are no changes to save, no need to increase the verson
+                    return
+            self._state['version'] += 1
+            payload = json.dumps(self._state)
+            self.d(f'save_to_redis: saving new version to redis: {payload}')
+            await db.set(self._key, payload)
+
+    # load from redis - called once
+    async def load_from_redis(self):
+        db = new_redis()
+        async with LockManager(self._lock):
+            db_data = await db.get(self._key)
+            if db_data:
+                try:
+                    self._state = json.loads(db_data)
+                except Exception:
+                    pass
+
+            self.d(f'load_from_redis: loaded state dict {self._state}')
+
 class Script(Logger):
     # todo: maybe switch to static approach like with scenes
     # We should also name scripts so we can have multiple scenarios we're testing and comparing.
     # That way we can save progress on a per-script basis
     Active_Scripts = []
 
-    def __init__(self, name, structure: dict):
+    def __init__(self, name, structure: dict, state_object: ScriptState):
         super(Script, self).__init__()
         self.name = name
         # structure format:
@@ -361,6 +527,7 @@ class Script(Logger):
         #    phone# : SceneSet
         # }
         self.structure = structure
+        self.state = state_object
 
     # Methods for dealing with making the basic structure
 
@@ -368,7 +535,14 @@ class Script(Logger):
     def add_script(cls, script):
         cls.Active_Scripts.append(script)
 
-    # methods where work happens
+    # methods for dealing with shared state
+
+    @property
+    def db_key(self):
+        return f'script:{self.name}'
+
+    async def load_state(self):
+        await self.state.load_from_redis()
 
     # return true if player is going t
     async def player_playing(self, request: TwilRequest):
@@ -396,7 +570,12 @@ class Script(Logger):
     async def play(self, request: TwilRequest):
         self.d(f'play({request})')
 
+        # note: some sloppy planning has resulted in confusing naming. There is the script state [for the player],
+        # which we frequently call the script state, and then there is the script state [for the script] that is
+        # shared and used by all players going through a script
         script_info: ScriptInfo = request.player.script(self.name)
+        shard: StateShard = self.state.shard
+
         if script_info is None or script_info.is_complete:
             self.d(f'play({request}): Previous script completed or we need a new one.')
             script_info = ScriptInfo()  # fresh!
@@ -408,14 +587,25 @@ class Script(Logger):
 
         scene = scene_state.scene
 
-        result = await scene.play(request, script_info)
+        # if something goes wrong
+        result = error_response()
+        try:
+            result = await scene.play(shard, request, script_info)
 
-        if scene.done(script_info):
-            self.d(f'play({request}) - scene is done. Script state: {script_info.state} -> {scene_state.next_state}')
-            script_info.scene_history.append(scene.Name)
-            script_info.state = scene_state.next_state
+            # shared script state
+            await shard.integrate()
 
-        request.player.set_script(self.name, script_info)  # should not be needed
+            if scene.done(script_info):
+                self.d(
+                    f'play({request}) - scene is done. Script state: {script_info.state} -> {scene_state.next_state}')
+                script_info.scene_history.append(scene.Name)
+                script_info.state = scene_state.next_state
+
+            request.player.set_script(self.name, script_info)  # should not be needed
+        except Exception as e:
+            self.e(f'Got exception from scene.play: {e}')
+            self.e(f'Returning generic confused response.')
+            await error_sms(f'Player {request.player} in Scene {self} encountered an exception: {e}')
 
         return result
 
@@ -443,6 +633,11 @@ class Script(Logger):
 # |_|    |_/_/\_\___|\__,_| |_|  \_\___||___/ .__/ \___/|_| |_|___/\___||___/
 #                                           | |
 #                                           |_|
+
+def error_response():
+    response = VoiceResponse()
+    response.say("Oh no! Something has gone wrong! Please give us a moment to check on it!")
+    return response
 
 
 def confused_response():

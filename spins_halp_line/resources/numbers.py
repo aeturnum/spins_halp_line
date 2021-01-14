@@ -27,9 +27,15 @@ class PhoneNumber:
             # if this throws just let it fly
             number = phonenumbers.parse("+1" + number)
 
-
-
         return number
+
+    def __eq__(self, other):
+        if isinstance(other, PhoneNumber):
+            return self.e164 == other.e164
+        elif isinstance(other, str):
+            return self == PhoneNumber(other)
+
+        return False
 
     # Used for twilio purposes
     @property
