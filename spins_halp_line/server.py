@@ -15,6 +15,7 @@ from spins_halp_line.tasks import work_queue, GitUpdate, Task
 from spins_halp_line.twil import t_resp, TwilRequest
 from spins_halp_line.util import do_monkey_patches, get_logger
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
+from spins_halp_line.media.common import All_Resources
 from spins_halp_line.stories.story_objects import Script, confused_response
 from spins_halp_line.stories.shipwreck_adventure import adventure
 from spins_halp_line.events import event_websocket, send_event
@@ -234,6 +235,10 @@ class ServerLoad(Task):
         self.d("Loading Global Number Library")
         await Global_Number_Library.load()
         self.d("Server Loading Finished")
+        self.d("Loading Shared Media Files")
+        for resource in All_Resources:
+            await resource.load()
+        self.d("Done Loading Shared Media Files")
 
         self.d("Starting Web Server")
         self._nurse.start_soon(self._serve)
