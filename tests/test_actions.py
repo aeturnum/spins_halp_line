@@ -3,6 +3,7 @@ import trio_asyncio
 
 from spins_halp_line.actions import twilio
 from spins_halp_line.actions import twilio
+from spins_halp_line.media.common import Conference_Hold_Music
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 
 
@@ -18,6 +19,11 @@ async def test_text():
 
 @pytest.mark.trio
 async def test_conf():
+    await Conference_Hold_Music.load()
+    assert "mp3" in Conference_Hold_Music.url
+
+@pytest.mark.trio
+async def test_audio():
     conf = await twilio.new_conference()
     print(conf.twiml_xml(PhoneNumber("+14156864014")))
 

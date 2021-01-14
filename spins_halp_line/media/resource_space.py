@@ -197,9 +197,11 @@ class RSResource(object):
         data = await self._cache.get(cache_key)
         if data is None:
             data = await self.get_info()
-            data[self._k_d_url] = await self.get_data_url()
-
             data = await self.load_extended_fields(data)
+            
+            self._data = data
+            # do this last so the extension is loaded
+            data[self._k_d_url] = await self.get_data_url()
 
             await self._cache.set(cache_key, data)
 
@@ -340,8 +342,6 @@ class RSResource(object):
         qstring = urllib.parse.urlencode(params)
 
         secret = Credentials[_cred_key][_secret]
-        print(secret)
-        print(qstring)
         signer = hashlib.sha256()
         signer.update(f'{secret}{qstring}'.encode("utf-8"))
 
