@@ -159,8 +159,12 @@ async def debug_conf_call():
     await req.load()
 
     num1 = PhoneNumber(req.data['num1'])
+    num2 = PhoneNumber(req.data['num2'])
+    from_num = Global_Number_Library.random()
+
     conf = await new_conference()
-    await conf.add_participant(Global_Number_Library.random(), num1)
+    await conf.add_participant(from_num, num1)
+    await conf.add_participant(from_num, num2)
 
     return ""
 
