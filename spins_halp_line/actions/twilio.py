@@ -23,8 +23,8 @@ _last_conference = 0
 
 _conference_key = "spins_conference_list"
 
-Conf_Twiml_Path = "/conf/twiml/<cnumber>"
-Conf_Status_Path = "/conf/status/<cnumber>"
+Conf_Twiml_Path = "/conf/twiml/<c_number>"
+Conf_Status_Path = "/conf/status/<c_number>"
 
 
 # This exists because we need to keep track of conferences and how they are progressing

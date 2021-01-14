@@ -125,12 +125,13 @@ async def get_conf_connection_twil(c_number):
 
     for conf in confs:
         if conf.matches(c_number):
-            return conf.twiml_xml(req.num_called)
+            return t_resp(conf.twiml_xml(req.num_called))
 
 @app.route(Conf_Status_Path, methods=["GET", "POST"])
 async def conf_status_update(c_number):
     req = TwilRequest(request)
     await req.load()
+    print(req.str("conf_status_update"))
 
     confs = conferences()
 
@@ -159,6 +160,8 @@ async def debug_conf_call():
     num1 = PhoneNumber(req.data['num1'])
     conf = await new_conference()
     await conf.add_participant(Global_Number_Library.random(), num1)
+
+    return ""
 
 
 @app.route("/debug", methods=["GET"])
