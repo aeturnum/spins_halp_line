@@ -137,7 +137,6 @@ async def get_conf_connection_twil(c_number):
 async def conf_status_update(c_number):
     req = TwilRequest(request)
     await req.load()
-    print(req.str("conf_status_update"))
 
     confs = conferences()
 

@@ -1,22 +1,42 @@
 [
   {
+    "number": "+18337594257",
+    "labels": ["start"],
+    "capabilities": ["voice", "sms"]
+  },
+  {
     "number": "+15102567675",
+    "labels": ["karen_1"],
     "capabilities": ["voice", "sms", "mms"]
   },
   {
     "number": "+15102567656",
+    "labels": ["karen_2"],
     "capabilities": ["voice", "sms", "mms"]
   },
   {
     "number": "+15102567710",
+    "labels": ["clavae_1"],
     "capabilities": ["voice", "sms", "mms"]
   },
   {
     "number": "+15102567705",
+    "labels": ["clavae_2"],
+    "capabilities": ["voice", "sms", "mms"]
+  },
+  {
+    "number": "+15102567751",
+    "labels": ["karen_3"],
+    "capabilities": ["voice", "sms", "mms"]
+  },
+  {
+    "number": "+15102567719",
+    "labels": ["clavae_3"],
     "capabilities": ["voice", "sms", "mms"]
   },
   {
     "number": "+15102567662",
+    "labels": ["conference"],
     "capabilities": ["voice", "sms", "mms"]
   }
 ]

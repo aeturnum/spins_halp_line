@@ -57,8 +57,6 @@ class AdventureRoom(Room):
         else:
             response.say(message=message)
 
-
-
         return response
 
 class ShipwreckYardFront(AdventureRoom):

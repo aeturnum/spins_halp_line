@@ -157,13 +157,15 @@ class RSResource(object):
     _k_room = 'room'
     _k_date = 'date'
     _k_duration = 'duration'
+    _k_path = 'path'
 
     _extended_fields = [
         _k_adventure,
         _k_player,
         _k_room,
         _k_date,
-        _k_duration
+        _k_duration,
+        _k_path
     ]
 
     _resource_types = {
@@ -198,7 +200,7 @@ class RSResource(object):
         if data is None:
             data = await self.get_info()
             data = await self.load_extended_fields(data)
-            
+
             self._data = data
             # do this last so the extension is loaded
             data[self._k_d_url] = await self.get_data_url()
@@ -252,6 +254,10 @@ class RSResource(object):
     @property
     def duration(self):
         return self._data.get(self._k_duration)
+
+    @property
+    def path(self):
+        return self._data.get(self._k_path)
 
     async def get_data_url(self):
         return await self._get(

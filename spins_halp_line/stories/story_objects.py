@@ -169,6 +169,10 @@ class Room(Logger):
     async def new_player_choice(self, choice: str, context: RoomContext):
         pass
 
+    # load any resources that we need
+    async def load(self):
+        pass
+
     async def action(self, context: RoomContext):
         raise ValueError("Cannot use base class of Room")
 
@@ -214,6 +218,10 @@ class Scene(Logger):
 
             for _, room_choice in choice_info.items():
                 self._add_to_index(room_choice)
+
+    async def load(self):
+        for room in self._room_index.values():
+            await room.load()
 
     def _add_to_index(self, room_list: Union[Room, List[Room]]):
         if not isinstance(room_list, list):
@@ -549,10 +557,12 @@ class Script(Logger):
         super(Script, self).__init__()
         self.name = name
         # structure format:
-        # Current_State: {
-        #    phone# : SceneSet
+        # {
+        #   Current_State: {
+        #        phone# : SceneSet
+        #   }
         # }
-        self.structure = structure
+        self.structure: Dict[str, Dict[str, SceneAndState]] = structure
         # got to give it the key
         state_object.set_key(self.db_key)
         self.state = state_object
@@ -571,6 +581,9 @@ class Script(Logger):
 
     async def load_state(self):
         await self.state.load_from_redis()
+        for choices in self.structure.values():
+            for scene_set in choices.values():
+                await scene_set.scene.load()
 
     # return true if player is going t
     async def player_playing(self, request: TwilRequest):

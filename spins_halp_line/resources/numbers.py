@@ -67,7 +67,7 @@ class NumberLibrary:
         self._file_path = number_file
         self.master_index: List[str] = [] # raw list of phone numbers
         self.capabilities: Dict[str, set] = {} # capabilities index
-        self.labels = {}
+        self.labels: Dict[str, str] = {}
 
     async def load(self):
         # json format
@@ -129,6 +129,10 @@ class NumberLibrary:
             candidates = [c for c in candidates if c in self.capabilities[cap]]
 
         return PhoneNumber(random.choice(candidates))
+
+    def from_label(self, label: str) -> PhoneNumber:
+        if label in self.labels:
+            return PhoneNumber(self.labels[label])
 
 
 Global_Number_Library = NumberLibrary()
