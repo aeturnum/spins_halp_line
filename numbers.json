@@ -6,5 +6,17 @@
   {
     "number": "+15102567656",
     "capabilities": ["voice", "sms", "mms"]
+  },
+  {
+    "number": "+15102567710",
+    "capabilities": ["voice", "sms", "mms"]
+  },
+  {
+    "number": "+15102567705",
+    "capabilities": ["voice", "sms", "mms"]
+  },
+  {
+    "number": "+15102567662",
+    "capabilities": ["voice", "sms", "mms"]
   }
 ]

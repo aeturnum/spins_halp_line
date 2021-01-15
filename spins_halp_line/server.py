@@ -11,17 +11,23 @@ from functools import partial
 
 from trio import MemoryReceiveChannel
 
-from spins_halp_line.tasks import work_queue, GitUpdate, Task
+from spins_halp_line.tasks import Trio_Task_Task_Object_Runner, GitUpdate, Task, add_task
 from spins_halp_line.twil import t_resp, TwilRequest
 from spins_halp_line.util import do_monkey_patches, get_logger
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import All_Resources
 from spins_halp_line.stories.story_objects import Script, confused_response
 from spins_halp_line.stories.shipwreck_adventure import adventure
+from spins_halp_line.stories.telemarketopia import telemarketopia
 from spins_halp_line.events import event_websocket, send_event
 from spins_halp_line.player import Player
-from spins_halp_line.actions.twilio import (
-    Conf_Twiml_Path, Conf_Status_Path, conferences, TwilConference, new_conference
+from spins_halp_line.actions.conferences import (
+    Conf_Twiml_Path,
+    Conf_Status_Path,
+    TwilConference,
+    new_conference,
+    conferences,
+    load_conferences
 )
 
 Script.add_script(adventure)
@@ -30,7 +36,6 @@ do_monkey_patches()
 
 app = QuartTrio(__name__)
 config = Config.from_toml("./hypercorn.toml")
-add_task, get_task = trio.open_memory_channel(50)
 
 message = subprocess.run(['git', 'log', '-1', '--pretty=%B'], capture_output=True)
 message = message.stdout.decode()
@@ -126,7 +131,7 @@ async def get_conf_connection_twil(c_number):
 
     for conf in confs:
         if conf == c_number:
-            return t_resp(conf.twiml_xml(req.num_called))
+            return t_resp(await conf.twiml_xml(req.num_called))
 
 @app.route(Conf_Status_Path, methods=["GET", "POST"])
 async def conf_status_update(c_number):
@@ -136,9 +141,9 @@ async def conf_status_update(c_number):
 
     confs = conferences()
 
-    # todo: Need to decide if we want to persist conferences in redis or not
-    # todo: see TwilConference.handle_conf_event
-
+    for conf in confs:
+        if conf == c_number:
+            await conf.handle_conf_event(req.data)
     # just 200-ok them
     return ""
 
@@ -155,6 +160,7 @@ async def conf_status_update(c_number):
 #                          |___/ |___/         |___/                     |_|
 @app.route("/debug/conf", methods=["POST"])
 async def debug_conf_call():
+    from spins_halp_line.media.common import Shazbot, Look_At_You_Hacker
     req = TwilRequest(request)
     await req.load()
 
@@ -163,8 +169,8 @@ async def debug_conf_call():
     from_num = Global_Number_Library.random()
 
     conf = await new_conference()
-    await conf.add_participant(from_num, num1)
-    await conf.add_participant(from_num, num2)
+    await conf.add_participant(from_num, num1, play_first=Look_At_You_Hacker)
+    await conf.add_participant(from_num, num2, play_first=Shazbot)
 
     return ""
 
@@ -236,13 +242,24 @@ class ServerLoad(Task):
 
     async def execute(self):
         self.d("Server Startup Beginning")
+
         self.d("Loading Global Number Library")
         await Global_Number_Library.load()
         self.d("Server Loading Finished")
+
         self.d("Loading Shared Media Files")
         for resource in All_Resources:
             await resource.load()
         self.d("Done Loading Shared Media Files")
+
+        self.d("Loading ongoing Conferences from redis!")
+        await load_conferences()
+        self.d("Conferences loaded!")
+
+        self.d("Loading script state from redis!")
+        # in theory we should use the script index but we don't have the time for that
+        await telemarketopia.load_state()
+        self.d("State loaded!")
 
         self.d("Starting Web Server")
         self._nurse.start_soon(self._serve)
@@ -254,7 +271,7 @@ async def async_layer():
             # start our own
             # do any server loading needed
             await add_task.send(ServerLoad(nurse, partial(serve, app, config)))
-            nurse.start_soon(work_queue, get_task)
+            nurse.start_soon(Trio_Task_Task_Object_Runner)
 
 
 trio_asyncio.run(async_layer)

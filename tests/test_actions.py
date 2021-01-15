@@ -1,6 +1,7 @@
 import pytest
 import trio_asyncio
 
+import spins_halp_line.actions.conferences
 from spins_halp_line.actions import twilio
 from spins_halp_line.actions import twilio
 from spins_halp_line.media.common import Conference_Hold_Music
@@ -24,7 +25,7 @@ async def test_conf():
 
 @pytest.mark.trio
 async def test_audio():
-    conf = await twilio.new_conference()
+    conf = await spins_halp_line.actions.conferences.new_conference()
     print(conf.twiml_xml(PhoneNumber("+14156864014")))
 
 @pytest.mark.trio

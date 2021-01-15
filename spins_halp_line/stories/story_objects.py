@@ -8,6 +8,7 @@ import trio
 from spins_halp_line.util import Logger, Snapshot, LockManager
 from spins_halp_line.resources.numbers import PhoneNumber
 from spins_halp_line.twil import TwilRequest
+from spins_halp_line.tasks import Task, add_task
 from spins_halp_line.resources.redis import new_redis
 from spins_halp_line.constants import (
     Script_Any_Number
@@ -513,6 +514,31 @@ class ScriptState(Logger):
 
             self.d(f'load_from_redis: loaded state dict {self._state}')
 
+class AfterRequestActions(Task):
+
+    # This *should* work for synchronization because each copy of the state will do its own
+    # lock on the shared lock. So changes will be ordered and will block any additions to the
+    # state from people going through their rooms.
+    #
+    # It's totally possible that these reduce loops happen out of order, but that is *fine*
+    # because we don't care about order. This is about reaching threshold values to move people
+    # out of waiting states.
+    #
+    # If we ever need this to be fair and ordered, we need to implement more strict ordering!
+    #
+    def __init__(self, shard: StateShard, state: ScriptState):
+        super(AfterRequestActions, self).__init__()
+        # remember that Task supports a delay arg if we need it
+        self.state = state
+        self.shard = shard
+
+    async def execute(self):
+        self.d(f'ARATask[{self.state}]')
+        await self.shard.integrate()
+        self.d(f'ARATask[{self.state}]: integration done')
+        await self.state.reduce()
+        self.d(f'ARATask[{self.state}]: reduction done')
+
 class Script(Logger):
     # todo: maybe switch to static approach like with scenes
     # We should also name scripts so we can have multiple scenarios we're testing and comparing.
@@ -592,8 +618,8 @@ class Script(Logger):
         try:
             result = await scene.play(shard, request, script_info)
 
-            # shared script state
-            await shard.integrate()
+            # apply changes
+            await add_task.send(AfterRequestActions(shard, self.state))
 
             if scene.done(script_info):
                 self.d(
