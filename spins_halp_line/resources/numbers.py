@@ -65,7 +65,7 @@ class NumberLibrary:
 
     def __init__(self, number_file="./numbers.json"):
         self._file_path = number_file
-        self.master_index: List[PhoneNumber] = [] # raw list of phone numbers
+        self.master_index: List[str] = [] # raw list of phone numbers
         self.capabilities: Dict[str, set] = {} # capabilities index
         self.labels = {}
 
@@ -85,7 +85,7 @@ class NumberLibrary:
         async with await trio.open_file(self._file_path) as f:
             dict_array = json.loads(await f.read())
             for num_info in dict_array:
-                self.master_index.append(PhoneNumber(num_info['number']))
+                self.master_index.append(num_info['number'])
                 capability_list = num_info['capabilities']
                 labels = num_info.get('labels', [])
                 # get the number we just inserted to keep our references straight
@@ -120,7 +120,7 @@ class NumberLibrary:
     def all_capabilities(self):
         return self.voice.union(self.sms).union(self.mms)
 
-    def random(self, capabilities:Optional[set]=None):
+    def random(self, capabilities:Optional[set]=None) -> PhoneNumber:
         if not capabilities:
             capabilities = self.voice
 
@@ -128,7 +128,7 @@ class NumberLibrary:
         for cap in capabilities:
             candidates = [c for c in candidates if c in self.capabilities[cap]]
 
-        return random.choice(candidates)
+        return PhoneNumber(random.choice(candidates))
 
 
 Global_Number_Library = NumberLibrary()

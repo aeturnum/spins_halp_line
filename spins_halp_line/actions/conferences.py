@@ -49,7 +49,7 @@ class TwilConference(Logger):
     @classmethod
     async def from_redis(cls, saved_data, locked=False):
         # global _conference_lock
-        # global _last_conference
+        global _last_conference
 
         async with LockManager(_conference_lock, locked):
             int_id = int(saved_data['id'])
@@ -68,7 +68,7 @@ class TwilConference(Logger):
     @classmethod
     async def create(cls, locked=None) -> 'TwilConference':
         # global _conference_lock
-        # global _last_conference
+        global _last_conference
 
         async with LockManager(_conference_lock, locked):
             new_id = _last_conference + 1

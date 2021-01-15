@@ -45,4 +45,4 @@ async def Trio_Task_Task_Object_Runner():
     async for task in _get_task:
         async with trio.open_nursery() as nurse:
             print(f"got task: {task}")
-            nurse.start_soon(task.do_an_execute, [task])
+            nurse.start_soon(task.do_an_execute, task)

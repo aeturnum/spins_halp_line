@@ -553,6 +553,8 @@ class Script(Logger):
         #    phone# : SceneSet
         # }
         self.structure = structure
+        # got to give it the key
+        state_object.set_key(self.db_key)
         self.state = state_object
 
     # Methods for dealing with making the basic structure
