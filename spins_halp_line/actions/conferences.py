@@ -115,11 +115,14 @@ class TwilConference(Logger):
         return False
 
     def to_redis(self):
+        started = ""
+        if self.started:
+            started = self.started.isoformat()
         return {
             'id': self.id,
             'participants': self.participants,
             'sid': self.twil_sid,
-            'started': self.started.isoformat(),
+            'started': started,
             'intros': json.dumps(self.intros)
         }
 
