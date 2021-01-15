@@ -200,7 +200,7 @@ class TwilConference(Logger):
 
         async with LockManager(_conference_lock):
             self.intros[number_to_call.e164] = play_first.id
-            await self._save_conference_list()
+            await self._save_conference_list(True)
 
     async def twiml_xml(self, number_calling: PhoneNumber) -> VoiceResponse:
         response = VoiceResponse()
