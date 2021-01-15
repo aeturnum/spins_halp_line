@@ -155,18 +155,20 @@ class TwilConference(Logger):
         async with LockManager(_conference_lock):
             dirty = False
 
-            # conf_name = body.get('FriendlyName')
             participant = body.get('ParticipantLabel')
             event_name = body.get('StatusCallbackEvent')
             conf_sid = body.get('ConferenceSid')
 
-            self.d(f'{participant} triggered {event_name}')
+            if participant:
+                self.d(f'{participant} triggered an {event_name} event!')
+            else:
+                self.d(f'{event_name} event was triggered!')
 
             if not self.twil_sid:
                 self.twil_sid = conf_sid
                 dirty = True
 
-            if participant not in self.participants:
+            if participant and participant not in self.participants:
                 # add a participant when we first see them in a callback
                 self.participants.append(PhoneNumber(participant))
                 dirty = True
@@ -210,6 +212,10 @@ class TwilConference(Logger):
             await resource.load()
             play = Play(resource.url, loop=1)
             response.append(play)
+            async with LockManager(_conference_lock):
+                # clear flag
+                del self.intros[number_calling.e164]
+                await self._save_conference_list(True)
 
         dial = Dial()
         dial.conference(
@@ -221,6 +227,7 @@ class TwilConference(Logger):
             participant_label=number_calling.e164
         )
         response.append(dial)
+
         return response
 
     def __str__(self):
