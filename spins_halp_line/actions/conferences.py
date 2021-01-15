@@ -120,7 +120,7 @@ class TwilConference(Logger):
             started = self.started.isoformat()
         return {
             'id': self.id,
-            'participants': self.participants,
+            'participants': [p.e164 for p in self.participants],
             'sid': self.twil_sid,
             'started': started,
             'intros': json.dumps(self.intros)
