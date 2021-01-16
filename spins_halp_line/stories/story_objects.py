@@ -227,6 +227,7 @@ class Scene(Logger):
 
     async def load(self):
         for room in self._room_index.values():
+            print(f'loading {room}')
             await room.load()
 
     def _add_to_index(self, room_list: Union[Room, List[Room]]):
