@@ -351,18 +351,29 @@ class ClavaeAccept(TeleRoom):
 class ClavaeAsksForHelp(PathScene):
     Name = "Clavae Asks For Help"
     Start = []
+    Choices = {
+        ClavaeAppeal(): {
+            Path_Clavae: {
+                '*': ClavaeAccept()
+            }
+        }
+    }
 
 
 class KarenInitiation(TeleRoom):
     Name = "Telemarketopia Initiation"
 
+class KarenAccepted(TeleRoom):
+    Name = "Accepted Initialaiton"
+    Gather = False
+
     async def get_audio_for_room(self, context: RoomContext):
         await send_text(Clavae1, context.player.number, delay=126)
-        return await self.get_resource_for_path(context)
+        return None
 
 class TeleInitiation(PathScene):
     Name = "Karen Initiation"
-    Start = [KarenInitiation]
+    Start = [KarenInitiation, KarenAccepted]
     Choices = {}
 
 Path_Assigned = "State_Path_Assigned"
