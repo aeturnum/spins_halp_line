@@ -6,9 +6,21 @@ Look_At_You_Hacker = RSResource(1005) # shodan quote
 
 # puzzle images
 Karen_Puzzle_Image_1 = RSResource(1002)
+Clavae_Puzzle_Image_1 = RSResource(1094)
+
+Karen_Final_Puzzle_Image_1 = RSResource(1092)
+Karen_Final_Puzzle_Image_2 = RSResource(1091)
+Clavae_Final_Puzzle_Image_1 = RSResource(1093)
+Clavae_Final_Puzzle_Image_2 = RSResource(1090)
 
 All_Resources = [
     Conference_Hold_Music,
     Shazbot,
-    Look_At_You_Hacker
+    Look_At_You_Hacker,
+    Karen_Puzzle_Image_1,
+    Clavae_Puzzle_Image_1,
+    Karen_Final_Puzzle_Image_1,
+    Karen_Final_Puzzle_Image_2,
+    Clavae_Final_Puzzle_Image_1,
+    Clavae_Final_Puzzle_Image_2,
 ]
