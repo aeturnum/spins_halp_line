@@ -124,7 +124,7 @@ class PathScene(Scene):
 
 class TextTask(Task):
     Text = ""
-    From = None
+    From_Number_Label = None
     Image = values.unset
     
     def __init__(self, to: PhoneNumber):
@@ -137,8 +137,9 @@ class TextTask(Task):
             await self.Image.load()
             image = self.Image.url
 
+        from_num = Global_Number_Library.from_label(self.From_Number_Label)
         await send_sms(
-            self.From,
+            from_num,
             self.to,
             self.Text,
             image
@@ -146,12 +147,12 @@ class TextTask(Task):
 
 class Clavae1(TextTask):
     Text = "Call me at +1-510-256-7710 to learn the horrible truth about Babyface's Telemarketopia!\n - Clavae"
-    From = Global_Number_Library.from_label('clavae_1')
+    From_Number_Label = 'clavae_1'
 
 class Karen1(TextTask):
     Text = "Solving this puzzle will give you the next phone number to call and prove you're Telemarketopia material!"
-    From = Global_Number_Library.from_label('karen_1')
-    Image = Karen_Puzzle_Image_1
+    From = 'karen_1'
+    From_Number_Label = Karen_Puzzle_Image_1
 
 async def send_text(TextClass, player_numer: PhoneNumber):
     await add_task.send(TextClass(player_numer))
@@ -243,7 +244,7 @@ class TipLineKarenText(TeleRoom):
     Name = "Tip Line Karen Text"
 
     async def get_audio_for_room(self, context: RoomContext):
-
+        await send_text(Karen1, context.player.number)
         return None
 
 class TipLineTip1(TeleRoom):
