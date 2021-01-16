@@ -1,6 +1,6 @@
 from typing import Dict, Union, List
 
-from twilio.twiml.voice_response import VoiceResponse, Play
+from twilio.twiml.voice_response import VoiceResponse, Play, Gather
 from twilio.base import values
 
 from .story_objects import Room, Scene, Script, SceneAndState, RoomContext, ScriptState, ScriptInfo
@@ -58,16 +58,15 @@ class TeleRoom(Room):
         response = VoiceResponse()
 
         if self.Gather:
-            with response.gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True) as g:
-                g.pause(length=2)
+            g = Gather(num_digit=self.Gather_Digits, method="POST", action_on_empty_result=True)
+            g.pause(2)
         else:
             g = response
 
         res = await self.get_audio_for_room(context)
         # Some rooms do not have audio and only exist to take actions and hang up on the player
         if res:
-            p = Play(res.url, loop=1)
-            g.append(p)
+            g.play(res.url, loop=1)
 
         return g
 
