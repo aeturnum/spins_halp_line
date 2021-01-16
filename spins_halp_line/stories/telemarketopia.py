@@ -21,7 +21,7 @@ from spins_halp_line.constants import (
 
 
 class TeleRoom(Room):
-    Name = "AdventureRoom"
+    Name = "TeleRoom"
     State_Transitions = {}
     Gather = True
     Gather_Digits = 1
@@ -67,6 +67,7 @@ class TeleRoom(Room):
             with response.gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True) as g:
                 g.pause(length=2)
 
+        self.d(f'action(): Returning xml: {response}')
         return response
 
 class PathScene(Scene):
