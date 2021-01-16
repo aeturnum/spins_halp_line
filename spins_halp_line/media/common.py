@@ -4,6 +4,9 @@ Conference_Hold_Music = RSResource(1003) # Hold music for conference system
 Shazbot = RSResource(1004) # short test audio from tribes
 Look_At_You_Hacker = RSResource(1005) # shodan quote
 
+# puzzle images
+Karen_Puzzle_Image_1 = RSResource(1002)
+
 All_Resources = [
     Conference_Hold_Music,
     Shazbot,

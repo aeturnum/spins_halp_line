@@ -7,6 +7,9 @@ from .story_objects import Room, Scene, Script, SceneAndState, RoomContext, Scri
 from spins_halp_line.actions.twilio import send_sms
 from spins_halp_line.tasks import add_task, Task
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
+from spins_halp_line.media.common import (
+    Karen_Puzzle_Image_1
+)
 from spins_halp_line.twil import TwilRequest
 from spins_halp_line.media.resource_space import RSResource
 from spins_halp_line.actions.conferences import TwilConference
@@ -117,23 +120,33 @@ class PathScene(Scene):
 class TextTask(Task):
     Text = ""
     From = None
-    Image =  values.unset
+    Image = values.unset
     
     def __init__(self, to: PhoneNumber):
         super(TextTask, self).__init__()
         self.to = to
     
     async def execute(self):
+        image = self.Image
+        if self.Image != values.unset:
+            await self.Image.load()
+            image = self.Image.url
+
         await send_sms(
             self.From,
             self.to,
             self.Text,
-            self.Image
+            image
         )
 
 class Clavae1(TextTask):
-    Text = "Call me at +1-510-256-7710 to learn the horrible truth about Babyface's Telemarketopia! - Clavae"
+    Text = "Call me at +1-510-256-7710 to learn the horrible truth about Babyface's Telemarketopia!\n - Clavae"
     From = Global_Number_Library.from_label('clavae_1')
+
+class Karen1(TextTask):
+    Text = "Solving this puzzle will give you the next phone number to call and prove you're Telemarketopia material!"
+    From = Global_Number_Library.from_label('karen_1')
+    Image = Karen_Puzzle_Image_1
 
 async def send_text(TextClass, player_numer: PhoneNumber):
     await add_task(TextClass(player_numer))
@@ -211,6 +224,21 @@ class TipLineQuiz2(TeleRoom):
 class TipLineQuiz3(TeleRoom):
     Name = "Tip Line Quiz 3"
 
+class TipLineQuizResults(TeleRoom):
+    Name = "Tip Line Quiz Results"
+
+class TipLineQuizOrientation(TeleRoom):
+    Name = "Tip Line Quiz Orientation"
+
+class TipLineKarenText(TeleRoom):
+    Name = "Tip Line Karen Text"
+
+    async def get_audio_for_room(self, context: RoomContext):
+
+
+
+        return None
+
 class TipLineTip1(TeleRoom):
     Name = "Tip Line Tip 1"
 
@@ -256,6 +284,21 @@ class TipLineScene(PathScene):
         TipLineQuiz2(): {
             Path_Karen: {
                 '*': TipLineQuiz3()
+            }
+        },
+        TipLineQuiz3(): {
+          Path_Karen: {
+              '*': TipLineQuizResults()
+          }
+        },
+        TipLineQuizResults(): {
+            Path_Karen: {
+                '*': TipLineQuizOrientation()
+            }
+        },
+        TipLineQuizOrientation(): {
+            Path_Karen: {
+                '*': TipLineKarenText()
             }
         },
         TipLineTip1(): {
