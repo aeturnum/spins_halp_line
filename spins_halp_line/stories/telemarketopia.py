@@ -336,6 +336,22 @@ class TipLineScene(PathScene):
         }
     }
 
+class KarenInitiation(TeleRoom):
+    Name = "Telemarketopia Initiation"
+
+class KarenAccepted(TeleRoom):
+    Name = "Accepted Initialaiton"
+    Gather = False
+
+    async def get_audio_for_room(self, context: RoomContext):
+        await send_text(Clavae1, context.player.number, delay=126)
+        return None
+
+class TeleInitiation(PathScene):
+    Name = "Karen Initiation"
+    Start = [KarenInitiation, KarenAccepted]
+    Choices = {}
+
 
 class ClavaeAppeal(TeleRoom):
     Name = "First Clavae Appeal"
@@ -359,23 +375,6 @@ class ClavaeAsksForHelp(PathScene):
             }
         }
     }
-
-
-class KarenInitiation(TeleRoom):
-    Name = "Telemarketopia Initiation"
-
-class KarenAccepted(TeleRoom):
-    Name = "Accepted Initialaiton"
-    Gather = False
-
-    async def get_audio_for_room(self, context: RoomContext):
-        await send_text(Clavae1, context.player.number, delay=126)
-        return None
-
-class TeleInitiation(PathScene):
-    Name = "Karen Initiation"
-    Start = [KarenInitiation, KarenAccepted]
-    Choices = {}
 
 Path_Assigned = "State_Path_Assigned"
 Second_Call_Done = "State_Second_Call_Done"
