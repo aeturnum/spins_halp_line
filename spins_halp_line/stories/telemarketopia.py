@@ -60,20 +60,16 @@ class TeleRoom(Room):
         if self.Gather:
             gather = Gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True)
             response.append(gather)
-            
-            maybe_gather = response
-        else:
-            maybe_gather = response
 
         res = await self.get_audio_for_room(context)
         # Some rooms do not have audio and only exist to take actions and hang up on the player
         if res:
             self.d(f'Got Audio Resource: {res}')
-            maybe_gather.play(res.url, loop=1)
+            response.play(res.url, loop=1)
         else:
-            maybe_gather = Hangup()
+            return Hangup()
 
-        return maybe_gather
+        return response
 
 class PathScene(Scene):
     Choices: Dict[Room, Dict[str, Dict[str, Union[Room, List[Room]]]]] = {}
