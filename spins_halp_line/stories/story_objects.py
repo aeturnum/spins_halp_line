@@ -8,6 +8,7 @@ import trio
 from spins_halp_line.util import Logger, Snapshot, LockManager
 from spins_halp_line.resources.numbers import PhoneNumber
 from spins_halp_line.twil import TwilRequest
+from spins_halp_line.player import Player
 from spins_halp_line.tasks import Task, add_task
 from spins_halp_line.resources.redis import new_redis
 from spins_halp_line.constants import (
@@ -67,10 +68,11 @@ class StateShard(dict):
 
 class RoomContext(dict):
 
-    def __init__(self, shard: StateShard, script_state: ScriptInfo, scene_state: SceneInfo, room_state: RoomInfo):
+    def __init__(self, player: Player, shard: StateShard, script_state: ScriptInfo, scene_state: SceneInfo, room_state: RoomInfo):
         # fill with our info
         super(RoomContext, self).__init__(room_state.data)
 
+        self.player = player
         self.shard = shard
         self.script = script_state.data
         self.scene = scene_state.data
@@ -210,6 +212,9 @@ class Scene(Logger):
         super(Scene, self).__init__()
         # because Name and Rooms are class variables this is basically static
         # We use the room index so we can use room names as indexes that we save to redis
+        self._index_rooms()
+
+    def _index_rooms(self):
         self._room_index: Dict[str, Room] = {}
         for r in self.Start:
             self._add_to_index(r)
@@ -253,15 +258,19 @@ class Scene(Logger):
                     self.d(f"done! - no previous room {done}")
                 else:
                     # we are done if there are no choices associated with this
-                    done = self.Choices.get(prev_room) is None
-                    self.d(f"done? choices: {self.Choices} room: {prev_room}")
-                    self.d(f"done? choices: {self.Choices.get(prev_room)} {done}")
+                    done = self.choices_for_room(prev_room) == None
+                    self.d(f"done? {done}")
             else:
                 self.d(f"not done - have rooms in queue {done}")
         else:
             self.d(f"not done - we have not run the scene yet! {done}")
 
         return done
+
+    def choices_for_room(self, room):
+        choices = self.Choices.get(room, None)
+        self.d(f"Choices_for_room({room}) -> {choices}")
+        return choices
 
     async def play(self, shard: StateShard, request: TwilRequest, script_state: ScriptInfo):
         self.d(f'play({request}, {script_state})')
@@ -279,7 +288,7 @@ class Scene(Logger):
 
         # handles either finishing the tunnel we are in or
         # picking a room based on choices.
-        room_queue = self._get_queue(request, scene_state)
+        room_queue = self._get_queue(request, script_state, scene_state)
         self.d(f"room queue: {room_queue}")
 
         # remove first member of the room_queue and get the room it references
@@ -299,7 +308,7 @@ class Scene(Logger):
         room_state = scene_state.room_state(room.Name)
         self.d(f"room state: {room_state}")
         # make whole context object
-        context = RoomContext(shard, script_state, scene_state, room_state)
+        context = RoomContext(request.player, shard, script_state, scene_state, room_state)
 
         await send_event(f"{request.player} entering {room}!")
         try:
@@ -359,7 +368,7 @@ class Scene(Logger):
             room_state = our_info.room_state(prev_room.Name)
 
             # room)state.choice will NOT have the new choice in it
-            context = RoomContext(shard, script_state, our_info, room_state)
+            context = RoomContext(request.player, shard, script_state, our_info, room_state)
             await prev_room.new_player_choice(player_choice, context)
 
             script_state, our_info, room_state = context._pass_back_changes(script_state, our_info, room_state)
@@ -370,7 +379,7 @@ class Scene(Logger):
         return script_state, our_info
 
 
-    def _get_queue(self, request: TwilRequest, our_info: SceneInfo) -> List[str]:
+    def _get_queue(self, request: TwilRequest, script_state: ScriptInfo, our_info: SceneInfo) -> List[str]:
         self.d(f"_get_queue()")
         if our_info.has_rooms_in_queue:
             self.d(f"Returning existing queue: {our_info.room_queue}")
@@ -382,23 +391,27 @@ class Scene(Logger):
         # need to turn the previous room into a room object:
         prev_room = self._name_to_room(our_info.prev_room)
         self.d(f"_get_queue() previous room: {prev_room}")
-        if prev_room is not None and prev_room in self.Choices:
-            # check if the player has a choice to make
-            number_entered = str(request.digits)
-            room_choices = self.Choices.get(prev_room)  # dictionary of choice to room
-            self.d(f"_get_queue() choices: {room_choices}")
-            # todo: standardize digits as a string?
-            if number_entered in room_choices:
-                queue = room_choices[number_entered]
-                self.d(f"Choice #{number_entered}: {queue}")
-            elif '*' in room_choices:  # default
-                queue = room_choices['*']
-                self.d(f"Choice *: {queue}")
+        if self.choices_for_room(prev_room) != None:
+            number = str(request.digits)
+            queue = self._get_choice_for_request(number, prev_room, script_state)
 
         # todo: add a default option that tells the user we didn't understand their choice and
         # todo: replays the previous room
-
         return self._item_to_room_name_list(queue)
+
+    def _get_choice_for_request(self, number: str, room: Room, script_state: ScriptInfo):
+        room_choices = self.Choices.get(room)  # dictionary of choice to room
+        self.d(f"_get_queue() choices: {room_choices}")
+        # todo: standardize digits as a string?
+        queue = None
+        if number in room_choices:
+            queue = room_choices[number]
+            self.d(f"Choice #{number}: {queue}")
+        elif '*' in room_choices:  # default
+            queue = room_choices['*']
+            self.d(f"Choice *: {queue}")
+
+        return queue
 
     @staticmethod
     def _item_to_room_name_list(obj) -> List[str]:
