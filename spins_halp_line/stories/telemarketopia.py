@@ -58,8 +58,10 @@ class TeleRoom(Room):
         response = VoiceResponse()
 
         if self.Gather:
-            maybe_gather = Gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True)
-            response.append(maybe_gather)
+            gather = Gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True)
+            response.append(gather)
+            
+            maybe_gather = response
         else:
             maybe_gather = response
 
