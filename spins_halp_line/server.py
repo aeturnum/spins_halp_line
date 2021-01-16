@@ -30,7 +30,7 @@ from spins_halp_line.actions.conferences import (
     load_conferences
 )
 
-Script.add_script(adventure)
+Script.add_script(telemarketopia)
 
 do_monkey_patches()
 
@@ -112,6 +112,17 @@ async def main_number():
     await req.player.save()
 
     return t_resp(response)
+
+@app.route("/tipline/sms", methods=['GET', 'POST'])
+async def handle_text():
+    req = TwilRequest(request)
+    response = None
+
+    await req.load()
+
+    print(f'Got text request: {req.str()}')
+
+    return t_resp("")
 
 #   _____             __                                _____      _ _ _                _
 #  / ____|           / _|                              / ____|    | | | |              | |
