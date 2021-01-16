@@ -52,7 +52,9 @@ class TeleRoom(Room):
             return self.resources[0]
 
         for resource in self.resources:
+            self.d(f'get_resource_for_path() {resource}')
             if context.script['path'] == resource.path:
+                self.d(f'get_resource_for_path() Returning: {resource}')
                 return resource
 
     async def action(self, context: RoomContext):
@@ -153,11 +155,11 @@ class TextTask(Task):
 class Clavae1(TextTask):
     Text = "Call me at +1-510-256-7710 to learn the horrible truth about Babyface's Telemarketopia!\n - Clavae"
     From_Number_Label = 'clavae_1'
-    Image = Clavae_Puzzle_Image_1
 
 class Clavae2(TextTask):
     Text = "Once you fill this in, this puzzle should give you a five-digit code to get into the database.\n - Clavae"
     From_Number_Label = 'clavae_2'
+    Image = Clavae_Puzzle_Image_1
 
 class Karen1(TextTask):
     Text = "Solving this puzzle will give you the next phone number to call and prove you're Telemarketopia material!"
