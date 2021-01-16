@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict, Union, Tuple, Callable
 from dataclasses import dataclass
 import json
+import traceback
 
 from twilio.twiml.voice_response import VoiceResponse
 import trio
@@ -658,6 +659,7 @@ class Script(Logger):
             request.player.set_script(self.name, script_info)  # should not be needed
         except Exception as e:
             self.e(f'Got exception from scene.play: {e}')
+            traceback.print_tb(e.__traceback__)
             self.e(f'Returning generic confused response.')
             await error_sms(f'Player {request.player} in Scene {self} encountered an exception: {e}')
 
