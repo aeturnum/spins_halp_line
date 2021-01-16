@@ -133,6 +133,7 @@ class NumberLibrary:
         return PhoneNumber(random.choice(candidates))
 
     def from_label(self, label: str) -> PhoneNumber:
+        print(f'from_label({label}): {self.labels}')
         if label in self.labels:
             return PhoneNumber(self.labels[label])
 

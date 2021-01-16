@@ -101,7 +101,9 @@ class PathScene(Scene):
         path_options = self.Choices.get(room)  # dictionary path choices
         if len(path_options.keys()) == 1:
             # We just are using '*'
-            room_choices = path_options['*']
+            room_choices = path_options.get(path,
+                                            path_options.get('*')
+                           )
         else:
             # This could throw an exception, which is fine
             room_choices = path_options[path]
