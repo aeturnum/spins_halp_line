@@ -251,7 +251,8 @@ async def load_conferences():
     async with LockManager(_conference_lock):
         db = new_redis()
         confs = await db.get(_conference_key).autodecode  # list of dict
-        _conferences = [(await TwilConference.from_redis(conf_data, locked=True)) for conf_data in confs]
+        if confs:
+            _conferences = [(await TwilConference.from_redis(conf_data, locked=True)) for conf_data in confs]
 
 
 def conferences() -> List[TwilConference]:
