@@ -67,6 +67,7 @@ class TeleRoom(Room):
         res = await self.get_audio_for_room(context)
         # Some rooms do not have audio and only exist to take actions and hang up on the player
         if res:
+            self.d(f'Got Audio Resource: {res}')
             g.play(res.url, loop=1)
 
         return response

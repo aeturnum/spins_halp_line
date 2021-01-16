@@ -369,7 +369,7 @@ class RSResource(object):
         return result
 
     def __str__(self):
-        return f'RSR[{self.id}] {self.title}'
+        return f'RSR[{self.id}] {self.url}'
 
     def __repr__(self):
         return str(self)
