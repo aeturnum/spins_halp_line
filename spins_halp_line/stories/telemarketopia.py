@@ -59,7 +59,7 @@ class TeleRoom(Room):
 
         if self.Gather:
             maybe_gather = Gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True)
-            response.append(g)
+            response.append(maybe_gather)
         else:
             maybe_gather = response
 
