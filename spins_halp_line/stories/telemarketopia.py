@@ -69,7 +69,7 @@ class TeleRoom(Room):
             self.d(f'Got Audio Resource: {res}')
             g.play(res.url, loop=1)
         else:
-            response.append(Hangup())
+            response = Hangup()
 
         return response
 
