@@ -216,7 +216,7 @@ class TipLineClavae(TeleRoom):
         return None
 
 
-class TipLineScene(Scene):
+class TipLineScene(PathScene):
     Name = "Telemarketopia Tip Line Scene"
     Start = []
     Choices = {
