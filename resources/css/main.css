@@ -14,9 +14,6 @@
 .right {
   grid-column: 3;
 }
-.json-container {
-  background: #A9A9A9;
-}
 .left {
   grid-column: 2;
 }

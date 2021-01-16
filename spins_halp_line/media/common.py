@@ -15,6 +15,8 @@ Karen_Final_Puzzle_Image_2 = RSResource(1091)
 Clavae_Final_Puzzle_Image_1 = RSResource(1093)
 Clavae_Final_Puzzle_Image_2 = RSResource(1090)
 
+Puppet_Master = RSResource(1096)
+
 All_Resources = [
     Conference_Hold_Music,
     Shazbot,
@@ -26,4 +28,5 @@ All_Resources = [
     Karen_Final_Puzzle_Image_2,
     Clavae_Final_Puzzle_Image_1,
     Clavae_Final_Puzzle_Image_2,
+    Puppet_Master
 ]

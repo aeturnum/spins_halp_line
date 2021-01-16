@@ -10,7 +10,8 @@ from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import (
     Karen_Puzzle_Image_1,
     Clavae_Puzzle_Image_1,
-    Telemarketopia_Logo
+    Telemarketopia_Logo,
+    Puppet_Master
 )
 from spins_halp_line.twil import TwilRequest
 from spins_halp_line.media.resource_space import RSResource
@@ -171,6 +172,12 @@ class Karen2(TextTask):
     From_Number_Label = 'karen_2'
     Image = Telemarketopia_Logo
 
+class ConfWait(TextTask):
+    Text = "Our systems are working on bisecting the quantum lagrange points, we'll connect you as soon as we can!"
+    From_Number_Label = 'conference'
+    Image = Telemarketopia_Logo
+
+
 async def send_text(TextClass, player_numer: PhoneNumber, delay=0):
     await add_task.send(TextClass(player_numer, delay))
 
@@ -211,7 +218,6 @@ class TeleConference(TwilConference):
 
     # do the things we need to do once players leave the conference
     async def do_handle_event(self, event, participant):
-
 
         return False
 
@@ -346,7 +352,7 @@ class KarenAccepted(TeleRoom):
     Gather = False
 
     async def get_audio_for_room(self, context: RoomContext):
-        await send_text(Clavae1, context.player.number, delay=126)
+        await send_text(Karen2, context.player.number)
         return None
 
 class TeleInitiation(PathScene):
@@ -362,7 +368,7 @@ class ClavaeAccept(TeleRoom):
     Name = "First Clavae Accepted"
 
     async def get_audio_for_room(self, context: RoomContext):
-        await send_text(Clavae2, context.player.number, delay=26)
+        await send_text(Clavae2, context.player.number)
         return await self.get_resource_for_path(context)
 
 
@@ -378,8 +384,141 @@ class ClavaeAsksForHelp(PathScene):
         }
     }
 
+class DatabasePassword(TeleRoom):
+    Name = "Database Password"
+    Gather_Digits = 5
+
+class DatabaseMenu(TeleRoom):
+    Name = "Database Menu"
+
+class DatabaseClassified(TeleRoom):
+    Name = "Database Classified Files"
+
+class DatabaseSecretMemo(TeleRoom):
+    Name = "Database Secret Memo"
+
+class DatabaseAIStart(TeleRoom):
+    Name = "Database AI Start"
+
+class DatabaseAINewArrivals(TeleRoom):
+    Name = "Database AI New Arrivals"
+
+class DatabaseAINewDepartures(TeleRoom):
+    Name = "Database AI Departures"
+
+class DatabaseAIThirdCall(TeleRoom):
+    Name = "Database AI Third Call"
+
+    async def get_audio_for_room(self, context: RoomContext):
+        context.shard.append(_clav_waiting_for_conf, context.player.number)
+        await send_text(ConfWait, context.player.number)
+        return await self.get_resource_for_path(context)
+
+class DatabaseCorrupted(TeleRoom):
+    Name = "Database File Corrupted"
+    Gather = False
+
+class Ghost(TeleRoom):
+    Name = 'Ghost'
+    Gather = False
+
+    async def get_audio_for_room(self, context: RoomContext):
+        return Puppet_Master
+
+class Database(PathScene):
+    Name = "Database"
+    Start = [DatabasePassword()]
+    Choices = {
+        DatabasePassword(): {
+            Path_Clavae: {
+                '02501': [Ghost(), DatabasePassword()],
+                '12610': DatabaseMenu(),
+                '*': DatabasePassword()
+            }
+        },
+        DatabaseMenu(): {
+            Path_Clavae: {
+                '1': DatabaseClassified(),
+                '2': DatabaseSecretMemo(),
+                '3': DatabaseAIStart(),
+            }
+        },
+        DatabaseClassified(): {
+            Path_Clavae: {
+                '1': [DatabaseCorrupted(), DatabaseMenu()],
+                '2': [DatabaseCorrupted(), DatabaseMenu()],
+                '*': DatabaseMenu()
+            }
+        },
+        DatabaseAIStart() : {
+            Path_Clavae: {
+                '1': DatabaseAINewArrivals(),
+                '2': DatabaseAINewDepartures(),
+                '*': DatabaseAIStart()
+            }
+        },
+        DatabaseAINewArrivals(): {
+            Path_Clavae: {
+                '2': DatabaseAINewDepartures(),
+                '*': DatabaseAIStart()
+            }
+        },
+        DatabaseAINewDepartures(): {
+            Path_Clavae: {
+                '1': DatabaseAIThirdCall(),
+                '*': DatabaseAINewDepartures()
+            }
+        }
+    }
+
+# name is INTENTIONALLY wrong
+class TelemarketopiaPreOath(TeleRoom):
+    Name = "Telemarketopia Oath"
+
+# name is INTENTIONALLY wrong
+class TelemarketopiOath(TeleRoom):
+    Name = "Telemarketopia Promotion 1"
+
+# name is INTENTIONALLY wrong
+class TelemarketopiAcceptPromo(TeleRoom):
+    Name = "Telemarketopia Accept Recruit"
+
+class TelemarketopiQueueForConf(TeleRoom):
+    Name = "Telemarketopia Karen Queue For Conf"
+
+    async def get_audio_for_room(self, context: RoomContext):
+        context.shard.append(_kar_waiting_for_conf, context.player.number)
+        await send_text(ConfWait, context.player.number)
+        return await self.get_resource_for_path(context)
+
+class TelemarketopiaPromotionScene(PathScene):
+    Name = "Telemarketopia Promotion"
+    Start = [TelemarketopiaPreOath()]
+    Choices = {
+        TelemarketopiaPreOath(): {
+            Path_Karen: {
+                '1': TelemarketopiOath(),
+                '*': TelemarketopiaPreOath()
+            }
+        },
+        TelemarketopiOath(): {
+            Path_Karen: {
+                '1': TelemarketopiAcceptPromo(),
+                '*': TelemarketopiOath()
+            }
+        },
+        TelemarketopiAcceptPromo(): {
+            Path_Karen: {
+                '1': TelemarketopiQueueForConf(),
+                '*': TelemarketopiAcceptPromo()
+            }
+        },
+    }
+
+
 Path_Assigned = "State_Path_Assigned"
 Second_Call_Done = "State_Second_Call_Done"
+Third_Call_Done = "State_Second_Call_Done"
 
 telemarketopia = Script(
     "Telemarketopia",
@@ -390,8 +529,14 @@ telemarketopia = Script(
         Path_Assigned: {
             # karen
             '+15102567656': SceneAndState(TeleInitiation(), Second_Call_Done),
-            #clavae
+            # clavae
             '+15102567710': SceneAndState(ClavaeAsksForHelp(), Second_Call_Done)
+        },
+        Second_Call_Done: {
+            # karen
+            "+15102567675": SceneAndState(TelemarketopiaPromotionScene(), Third_Call_Done),
+            # clavae
+            "+15102567705": SceneAndState(Database(), Third_Call_Done)
         }
     },
     TeleState()
