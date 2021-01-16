@@ -135,7 +135,6 @@ class RSResource(object):
                 'search': f'room:{room_name}'
             }
         )
-        print(files)
         files = [f for f in files if f['field8'] == room_name]
         return await cls._from_list(files)
 
