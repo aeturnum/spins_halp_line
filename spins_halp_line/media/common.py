@@ -15,6 +15,9 @@ Karen_Final_Puzzle_Image_2 = RSResource(1091)
 Clavae_Final_Puzzle_Image_1 = RSResource(1093)
 Clavae_Final_Puzzle_Image_2 = RSResource(1090)
 
+Karen_Conference_Info = RSResource(1089)
+Clavae_Conference_Intro = RSResource(1074)
+
 Puppet_Master = RSResource(1096)
 
 All_Resources = [
@@ -28,5 +31,7 @@ All_Resources = [
     Karen_Final_Puzzle_Image_2,
     Clavae_Final_Puzzle_Image_1,
     Clavae_Final_Puzzle_Image_2,
-    Puppet_Master
+    Puppet_Master,
+    Karen_Conference_Info,
+    Clavae_Conference_Intro,
 ]

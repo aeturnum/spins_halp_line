@@ -2,8 +2,20 @@ from typing import Dict, Union, List
 
 from twilio.twiml.voice_response import VoiceResponse, Play, Gather, Hangup
 from twilio.base import values
+import trio
 
-from .story_objects import Room, Scene, Script, SceneAndState, RoomContext, ScriptState, ScriptInfo
+from .story_objects import (
+    Room,
+    Scene,
+    Script,
+    SceneAndState,
+    RoomContext,
+    ScriptState,
+    ScriptInfo,
+    StateShard
+)
+
+from spins_halp_line.actions.conferences import new_conference, conferences
 from spins_halp_line.actions.twilio import send_sms
 from spins_halp_line.tasks import add_task, Task
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
@@ -11,7 +23,9 @@ from spins_halp_line.media.common import (
     Karen_Puzzle_Image_1,
     Clavae_Puzzle_Image_1,
     Telemarketopia_Logo,
-    Puppet_Master
+    Puppet_Master,
+    Clavae_Conference_Intro,
+    Karen_Conference_Info
 )
 from spins_halp_line.twil import TwilRequest
 from spins_halp_line.media.resource_space import RSResource
@@ -21,6 +35,16 @@ from spins_halp_line.constants import (
     Script_Any_Number,
     Script_End_State
 )
+
+
+#   _____                 _       _    _____ _
+#  / ____|               (_)     | |  / ____| |
+# | (___  _ __   ___  ___ _  __ _| | | |    | | __ _ ___ ___  ___  ___
+#  \___ \| '_ \ / _ \/ __| |/ _` | | | |    | |/ _` / __/ __|/ _ \/ __|
+#  ____) | |_) |  __/ (__| | (_| | | | |____| | (_| \__ \__ \  __/\__ \
+# |_____/| .__/ \___|\___|_|\__,_|_|  \_____|_|\__,_|___/___/\___||___/
+#        | |
+#        |_|
 
 
 class TeleRoom(Room):
@@ -129,6 +153,14 @@ class PathScene(Scene):
 
         return queue
 
+#
+#  _______        _
+# |__   __|      | |
+#    | | _____  _| |_ ___
+#    | |/ _ \ \/ / __/ __|
+#    | |  __/>  <| |_\__ \
+#    |_|\___/_/\_\\__|___/
+#
 
 class TextTask(Task):
     Text = ""
@@ -181,6 +213,74 @@ class ConfWait(TextTask):
 async def send_text(TextClass, player_numer: PhoneNumber, delay=0):
     await add_task.send(TextClass(player_numer, delay))
 
+
+#   _____           _       _      _____ _                        _    _____ _        _
+#  / ____|         (_)     | |    / ____| |                      | |  / ____| |      | |
+# | (___   ___ _ __ _ _ __ | |_  | (___ | |__   __ _ _ __ ___  __| | | (___ | |_ __ _| |_ ___
+#  \___ \ / __| '__| | '_ \| __|  \___ \| '_ \ / _` | '__/ _ \/ _` |  \___ \| __/ _` | __/ _ \
+#  ____) | (__| |  | | |_) | |_   ____) | | | | (_| | | |  __/ (_| |  ____) | || (_| | ||  __/
+# |_____/ \___|_|  |_| .__/ \__| |_____/|_| |_|\__,_|_|  \___|\__,_| |_____/ \__\__,_|\__\___|
+#                    | |
+#                    |_|
+
+
+# subclass to handle our specific needs around conferences
+class TeleConference(TwilConference):
+
+    def do_create(self, new_id):
+        return TeleConference(new_id)
+
+    # do the things we need to do once players leave the conference
+    async def do_handle_event(self, event, participant):
+
+        return False
+
+class ConferenceTask(Task):
+    def __init__(self, clavae_player: str, karen_player: str, shard: StateShard):
+        super(ConferenceTask, self).__init__(0)
+        self.clavae = clavae_player
+        self.karen = karen_player
+        self.shard = shard
+        self.conference = None
+
+    async def load_conference(self):
+        if not self.conference:
+            self.conference = await new_conference(TeleConference)
+            return self.conference
+
+        for conf in conferences():
+            if conf == self.conference:
+                # this *should* not matter but I am past dealing with instance fuckary
+                return conf
+
+    async def execute(self):
+        conference = await new_conference(TeleConference)
+        from_number = Global_Number_Library.from_label('conference')
+        clavae_num = PhoneNumber(self.clavae)
+        karen_num = PhoneNumber(self.karen)
+
+        while True:
+            # todo: add task to text players and see if they are ready
+
+            # todo: also need a way to trigger the reduce loop from a task so we can re-match
+            # todo: players without a new person calling
+
+            await trio.sleep(60 * 5)
+
+            await conference.add_participant(
+                from_number,
+                clavae_num,
+                play_first=Clavae_Conference_Intro
+            )
+
+            await conference.add_participant(
+                from_number,
+                karen_num,
+                play_first=Karen_Conference_Info
+            )
+
+            await trio.sleep(30)
+
 # paths
 Path_Clavae = 'Clavae'
 Path_Karen = 'Karen'
@@ -206,20 +306,23 @@ class TeleState(ScriptState):
         )
 
     @staticmethod
-    async def do_reduce(state):
+    async def do_reduce(state: dict, shard: StateShard):
         # todo: think about doing something about how recently players have been active?
         # todo: players who have been out for a while might not want to play
 
+        clave_waiting = state.get(_clav_waiting_for_conf)
+        karen_waiting = state.get(_kar_waiting_for_conf)
+        if len(clave_waiting) > 1 and len(karen_waiting) > 1:
+            # conference time baby!
+            await add_task.send(
+                ConferenceTask(
+                    state[_clav_waiting_for_conf].pop(0),
+                    state[_kar_waiting_for_conf].pop(0),
+                    shard
+                )
+            )
+
         return state
-
-
-# subclass to handle our specific needs around conferences
-class TeleConference(TwilConference):
-
-    # do the things we need to do once players leave the conference
-    async def do_handle_event(self, event, participant):
-
-        return False
 
 class TipLineStart(TeleRoom):
     Name = "Tip Line Start"
@@ -519,6 +622,12 @@ class TelemarketopiaPromotionScene(PathScene):
 Path_Assigned = "State_Path_Assigned"
 Second_Call_Done = "State_Second_Call_Done"
 Third_Call_Done = "State_Second_Call_Done"
+
+# todo: Put a function into Script that will handle texts that we get from twilio
+# todo: Then we need a method of updating player state and also updating shared script state
+# todo: Maybe we do this with one huge function that we run
+# todo: Maybe we pass in an object that does it
+# todo
 
 telemarketopia = Script(
     "Telemarketopia",

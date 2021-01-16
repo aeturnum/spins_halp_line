@@ -490,7 +490,7 @@ class ScriptState(Logger):
     # This function is what should be overridden in child classes.
     # Then the child class should be passed into the script when you construct it.
     @staticmethod
-    async def do_reduce(state):
+    async def do_reduce(state: dict, shard:StateShard):
         return state
 
     # This is used to check if our version is out of date
@@ -507,7 +507,7 @@ class ScriptState(Logger):
         # sync with DB
         async with LockManager(self._lock):
             await self.sync_redis(True)
-            self._state = await self.do_reduce(self._state)
+            self._state = await self.do_reduce(self._state, self.shard)
 
             await self.save_to_redis(True)
 

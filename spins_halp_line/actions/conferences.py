@@ -65,6 +65,9 @@ class TwilConference(Logger):
 
             return TwilConference(int_id, participants, sid, started)
 
+    def do_create(self, new_id):
+        return TwilConference(new_id)
+
     @classmethod
     async def create(cls, locked=None) -> 'TwilConference':
         # global _conference_lock
@@ -74,7 +77,7 @@ class TwilConference(Logger):
             new_id = _last_conference + 1
             _last_conference = new_id
 
-            return TwilConference(new_id)
+            return self.do_create(new_id)
 
     def __init__(self, id_, participants=None, sid=None, started=None):
         super(TwilConference, self).__init__()
@@ -195,6 +198,9 @@ class TwilConference(Logger):
 
         async with LockManager(_twil_lock):
             _twilio_client.calls.create(
+                machine_detection='Enable',
+                async_amd='true',
+                async_amd_status_callback='',
                 url=self.twiml_callback,
                 to=number_to_call.e164,
                 from_=from_number.e164
@@ -234,16 +240,16 @@ class TwilConference(Logger):
         return f'Conf[{self.id}]'
 
 
-async def new_conference() -> TwilConference:
+async def new_conference(conf_class=TwilConference) -> TwilConference:
     # global _conferences
     # global _conference_lock
 
     # will lock and unlock
-    new_conf = await TwilConference.create()
+    new_conf = await conf_class.create()
 
     async with LockManager(_conference_lock):
         _conferences.append(new_conf)
-        await TwilConference._save_conference_list(True)
+        await conf_class._save_conference_list(True)
 
     return new_conf
 
