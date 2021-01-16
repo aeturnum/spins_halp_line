@@ -3,7 +3,7 @@ class WrapException(Exception):
     _NAME = "WrapException"
 
     def __init__(self, message, wrapped_exception=None):
-        super(StoryNavigationException, self).__init__()
+        super(WrapException, self).__init__()
         self._message = message
         self.wrapped_exception = wrapped_exception
 
