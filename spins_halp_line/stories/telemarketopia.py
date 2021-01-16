@@ -199,6 +199,7 @@ class TipLineStart(TeleRoom):
         # we need to select a path
         path = context.script.get('path', None)
         if path is None:
+            print(f'context shard in first room: {context.shard}')
             clavae_players = context.shard.get(_clavae_players)
             karen_players = context.shard.get(_karen_players)
 
