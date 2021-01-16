@@ -295,17 +295,18 @@ class Scene(Logger):
         self.d(f"room queue: {room_queue}")
 
         # remove first member of the room_queue and get the room it references
+
         try:
-            room = self._name_to_room(room_queue.pop(0))
+            room = room_queue[0]
+            room = self._name_to_room(room)
+            # if that worked...
+            room_queue.pop(0)
         except IndexError:
             self.e(f"Tried to pop from empty room queue! Replying last room")
-            try:
-                room = self._name_to_room(scene_state.prev_room)
-            except Exception as e:
-                raise StoryNavigationException("Could not get next room", e)
+            room = self._name_to_room(scene_state.prev_room)
 
-        except Exception as e:
-            raise StoryNavigationException("Could not get next room", e)
+        # except Exception as e:
+        #     raise StoryNavigationException("Could not get next room", e)
 
         # get room state
         room_state = scene_state.room_state(room.Name)
@@ -356,7 +357,7 @@ class Scene(Logger):
         return scene_state
 
     def _name_to_room(self, room_name: str) -> Optional[Room]:
-        return self._room_index.get(room_name, None)
+        return self._room_index[room_name]
 
     async def _notify_last_room_of_choice(
             self,
