@@ -339,7 +339,7 @@ class Scene(Logger):
             script_state.scene_states[self.Name] = scene_state
         except Exception as e:
             script_state_snap.restore() # undo any changes, though we generally won't save anything
-            raise StoryNavigationException("Failed while trying to take room action", e)
+            raise StoryNavigationException("Failed while trying to save state", e)
 
         return twilio_action
 

@@ -11,11 +11,11 @@ class WrapException(Exception):
     @property
     def message(self):
         if not self.wrapped_exception:
-            s = f'{self._NAME}: {self._message}:'
+            return f'{self._NAME}: {self._message}:'
+        else:
+            s = f'{self._NAME}: While attempting "{self._message}", got exception {self.wrapped_exception}:'
             s += "\n".join(traceback.extract_tb(self.wrapped_exception.__traceback__).format())
             return s
-        else:
-            return f'{self._NAME}: While attempting "{self._message}," encountered: {str(self.wrapped_exception)}'
 
     def __str__(self):
         return self.message
