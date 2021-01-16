@@ -349,7 +349,7 @@ class KarenAccepted(TeleRoom):
 
 class TeleInitiation(PathScene):
     Name = "Karen Initiation"
-    Start = [KarenInitiation, KarenAccepted]
+    Start = [KarenInitiation(), KarenAccepted()]
     Choices = {}
 
 
