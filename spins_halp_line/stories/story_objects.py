@@ -494,7 +494,7 @@ class ScriptState(Logger):
     async def sync_redis(self, locked=False):
         db = new_redis()
         async with LockManager(self._lock, already_locked=locked):
-            db_version = await db.get(self._key)
+            db_version = await db.get(self._key).autodecode
             if db_version and db_version['version'] > self.version:
                 self._state = db_version
 

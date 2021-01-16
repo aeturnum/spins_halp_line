@@ -1,4 +1,5 @@
 import trio
+import traceback
 
 from spins_halp_line.util import Logger
 
@@ -21,6 +22,7 @@ class Task(Logger):
             await task_object.execute()
         except Exception as e:
             print(f"Task got exception: {e}")
+            print("\n".join(traceback.extract_tb(e.__traceback__).format()))
             if task_object.re_raise_exceptions:
                 raise e
 
