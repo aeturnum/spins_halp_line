@@ -57,18 +57,19 @@ class TeleRoom(Room):
         self.d(f"action() context: {context}")
         response = VoiceResponse()
 
+        if self.Gather:
+            with response.gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True) as g:
+                g.pause(length=2)
+        else:
+            g = response
+
         res = await self.get_audio_for_room(context)
         # Some rooms do not have audio and only exist to take actions and hang up on the player
         if res:
             p = Play(res.url, loop=1)
-            response.append(p)
+            g.append(p)
 
-        if self.Gather:
-            with response.gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True) as g:
-                g.pause(length=2)
-
-        self.d(f'action(): Returning xml: {response}')
-        return response
+        return g
 
 class PathScene(Scene):
     Choices: Dict[Room, Dict[str, Dict[str, Union[Room, List[Room]]]]] = {}
@@ -150,7 +151,7 @@ class Karen1(TextTask):
     Image = Karen_Puzzle_Image_1
 
 async def send_text(TextClass, player_numer: PhoneNumber):
-    await add_task(TextClass(player_numer))
+    await add_task.send(TextClass(player_numer))
 
 # paths
 Path_Clavae = 'Clavae'
@@ -207,8 +208,10 @@ class TipLineStart(TeleRoom):
 
             if len(clavae_players) <= len(karen_players):
                 path = Path_Clavae
+                context.shard.append(_clavae_players, context.player.number.e164)
             else:
                 path = Path_Karen
+                context.shard.append(_karen_players, context.player.number.e164)
 
             # set path!
             context.script['path'] = path
@@ -237,8 +240,6 @@ class TipLineKarenText(TeleRoom):
     Name = "Tip Line Karen Text"
 
     async def get_audio_for_room(self, context: RoomContext):
-
-
 
         return None
 
