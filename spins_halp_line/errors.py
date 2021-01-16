@@ -1,8 +1,9 @@
+import traceback
 
 class WrapException(Exception):
     _NAME = "WrapException"
 
-    def __init__(self, message, wrapped_exception=None):
+    def __init__(self, message, wrapped_exception:Exception=None):
         super(WrapException, self).__init__()
         self._message = message
         self.wrapped_exception = wrapped_exception
@@ -10,7 +11,9 @@ class WrapException(Exception):
     @property
     def message(self):
         if not self.wrapped_exception:
-            return f'{self._NAME}: {self._message}'
+            s = f'{self._NAME}: {self._message}:'
+            s += "\n".join(traceback.extract_tb(self.wrapped_exception.__traceback__).format())
+            return s
         else:
             return f'{self._NAME}: While attempting "{self._message}," encountered: {str(self.wrapped_exception)}'
 
