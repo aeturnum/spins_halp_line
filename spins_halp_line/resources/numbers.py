@@ -33,6 +33,8 @@ class PhoneNumber:
         if isinstance(other, PhoneNumber):
             return self.e164 == other.e164
         elif isinstance(other, str):
+            if other == '*':
+                return True # We are always equal to '*'
             return self == PhoneNumber(other)
 
         return False

@@ -202,6 +202,15 @@ class TipLineStart(TeleRoom):
 class TipLineRecruit(TeleRoom):
     Name = "Tip Line Recruit"
 
+class TipLineQuiz1(TeleRoom):
+    Name = "Tip Line Quiz 1"
+
+class TipLineQuiz2(TeleRoom):
+    Name = "Tip Line Quiz 2"
+
+class TipLineQuiz3(TeleRoom):
+    Name = "Tip Line Quiz 3"
+
 class TipLineTip1(TeleRoom):
     Name = "Tip Line Tip 1"
 
@@ -218,7 +227,7 @@ class TipLineClavae(TeleRoom):
 
 class TipLineScene(PathScene):
     Name = "Telemarketopia Tip Line Scene"
-    Start = []
+    Start = [TipLineStart()]
     Choices = {
         TipLineStart(): {
             Path_Clavae: {
@@ -231,6 +240,31 @@ class TipLineScene(PathScene):
                 '1': TipLineTip1(),
                 '2': TipLineTip2(),
                 '5': TipLineRecruit(),
+                '*': TipLineStart()
+            }
+        },
+        TipLineRecruit() : {
+            Path_Karen: {
+                '5': TipLineQuiz1()
+            }
+        },
+        TipLineQuiz1(): {
+            Path_Karen: {
+                '*': TipLineQuiz2()
+            }
+        },
+        TipLineQuiz2(): {
+            Path_Karen: {
+                '*': TipLineQuiz3()
+            }
+        },
+        TipLineTip1(): {
+            '*': {
+                '*': TipLineStart()
+            }
+        },
+        TipLineTip2(): {
+            '*': {
                 '*': TipLineStart()
             }
         }
