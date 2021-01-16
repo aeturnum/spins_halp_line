@@ -159,10 +159,13 @@ class Player(Logger):
     async def get_all_json(cls) -> dict:
         db = new_redis()
         players = await cls._get_player_keys(db)
-        player_dicts = await db.mget(" ".join(players)).autodecode
-        return {
-            player: player_dicts[idx] for idx, player in enumerate(players)
-        }
+        result = {}
+        for player in players:
+
+            play_dict = await db.get(player).autodecode
+            result[player] = play_dict
+
+        return result
 
     @classmethod
     async def reset(cls, plr):
