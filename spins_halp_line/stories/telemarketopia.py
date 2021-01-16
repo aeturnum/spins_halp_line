@@ -52,9 +52,9 @@ class TeleRoom(Room):
             return self.resources[0]
 
         for resource in self.resources:
-            self.d(f'get_resource_for_path() {resource}')
+            # self.d(f'get_resource_for_path() {resource}')
             if context.script['path'] == resource.path:
-                self.d(f'get_resource_for_path() Returning: {resource}')
+                # self.d(f'get_resource_for_path() Returning: {resource}')
                 return resource
 
     async def action(self, context: RoomContext):
@@ -362,7 +362,7 @@ class ClavaeAccept(TeleRoom):
     Name = "First Clavae Accepted"
 
     async def get_audio_for_room(self, context: RoomContext):
-        await send_text(Clavae2, context.player.number, delay=126)
+        await send_text(Clavae2, context.player.number, delay=26)
         return await self.get_resource_for_path(context)
 
 
@@ -389,7 +389,7 @@ telemarketopia = Script(
         },
         Path_Assigned: {
             # karen
-            '+15102567675': SceneAndState(TeleInitiation(), Second_Call_Done),
+            '+15102567656': SceneAndState(TeleInitiation(), Second_Call_Done),
             #clavae
             '+15102567710': SceneAndState(ClavaeAsksForHelp(), Second_Call_Done)
         }

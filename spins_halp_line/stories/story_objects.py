@@ -643,6 +643,10 @@ class Script(Logger):
 
         scene_state = self._get_scene_state(script_info, request.num_called)
 
+        if scene_state is None:
+            self.e(f'!!!\n!!!\nCould not get Scene for: {request.num_called} by {request.player.number}')
+            return error_response()
+
         scene = scene_state.scene
 
         # if something goes wrong
