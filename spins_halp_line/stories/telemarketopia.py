@@ -60,6 +60,7 @@ class TeleRoom(Room):
         if self.Gather:
             g = Gather(num_digit=self.Gather_Digits, method="POST", action_on_empty_result=True)
             g.pause(2)
+            response.append(g)
         else:
             g = response
 
@@ -68,7 +69,7 @@ class TeleRoom(Room):
         if res:
             g.play(res.url, loop=1)
 
-        return g
+        return response
 
 class PathScene(Scene):
     Choices: Dict[Room, Dict[str, Dict[str, Union[Room, List[Room]]]]] = {}
