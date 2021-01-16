@@ -348,10 +348,9 @@ class ClavaeAccept(TeleRoom):
         return await self.get_resource_for_path(context)
 
 
-class ClavaeAppeal(PathScene):
-    Name = "Clavae Appeal"
+class ClavaeAsksForHelp(PathScene):
+    Name = "Clavae Asks For Help"
     Start = []
-
 
 
 class KarenInitiation(TeleRoom):
@@ -367,6 +366,7 @@ class TeleInitiation(PathScene):
     Choices = {}
 
 Path_Assigned = "State_Path_Assigned"
+Second_Call_Done = "State_Second_Call_Done"
 
 telemarketopia = Script(
     "Telemarketopia",
@@ -376,9 +376,9 @@ telemarketopia = Script(
         },
         Path_Assigned: {
             # karen
-            '+15102567675': SceneAndState(),
+            '+15102567675': SceneAndState(TeleInitiation(), Second_Call_Done),
             #clavae
-            '+15102567710': SceneAndState()
+            '+15102567710': SceneAndState(ClavaeAsksForHelp(), Second_Call_Done)
         }
     },
     TeleState()
