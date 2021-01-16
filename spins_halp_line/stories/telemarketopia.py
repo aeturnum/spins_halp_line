@@ -58,16 +58,20 @@ class TeleRoom(Room):
         response = VoiceResponse()
 
         if self.Gather:
-            gather = Gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True)
-            response.append(gather)
+            maybe_gather = Gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True)
+            response.append(maybe_gather)
+        else:
+            maybe_gather = response
 
         res = await self.get_audio_for_room(context)
         # Some rooms do not have audio and only exist to take actions and hang up on the player
         if res:
             self.d(f'Got Audio Resource: {res}')
-            response.play(res.url, loop=1)
+            maybe_gather.play(res.url, loop=1)
         else:
-            return Hangup()
+            vr = VoiceResponse()
+            vr.hangup()
+            return vr
 
         return response
 
