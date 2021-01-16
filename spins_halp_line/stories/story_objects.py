@@ -236,6 +236,7 @@ class Scene(Logger):
 
         for room in room_list:
             if room.Name not in self._room_index:
+                print(f"Adding room to index: {room}")
                 self._room_index[room.Name] = room
 
     def done(self, info: ScriptInfo) -> bool:

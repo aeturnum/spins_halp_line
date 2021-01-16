@@ -350,11 +350,12 @@ class ClavaeAccept(TeleRoom):
 
 class ClavaeAsksForHelp(PathScene):
     Name = "Clavae Asks For Help"
-    Start = []
+    Start = [ClavaeAppeal()]
     Choices = {
         ClavaeAppeal(): {
             Path_Clavae: {
-                '*': ClavaeAccept()
+                '1': ClavaeAccept(),
+                '*': ClavaeAppeal()
             }
         }
     }
