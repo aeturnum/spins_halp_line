@@ -8,7 +8,9 @@ from spins_halp_line.actions.twilio import send_sms
 from spins_halp_line.tasks import add_task, Task
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import (
-    Karen_Puzzle_Image_1
+    Karen_Puzzle_Image_1,
+    Clavae_Puzzle_Image_1,
+    Telemarketopia_Logo
 )
 from spins_halp_line.twil import TwilRequest
 from spins_halp_line.media.resource_space import RSResource
@@ -130,8 +132,8 @@ class TextTask(Task):
     From_Number_Label = None
     Image = values.unset
     
-    def __init__(self, to: PhoneNumber):
-        super(TextTask, self).__init__()
+    def __init__(self, to: PhoneNumber, delay=0):
+        super(TextTask, self).__init__(delay)
         self.to = to
     
     async def execute(self):
@@ -151,14 +153,24 @@ class TextTask(Task):
 class Clavae1(TextTask):
     Text = "Call me at +1-510-256-7710 to learn the horrible truth about Babyface's Telemarketopia!\n - Clavae"
     From_Number_Label = 'clavae_1'
+    Image = Clavae_Puzzle_Image_1
+
+class Clavae2(TextTask):
+    Text = "Once you fill this in, this puzzle should give you a five-digit code to get into the database.\n - Clavae"
+    From_Number_Label = 'clavae_2'
 
 class Karen1(TextTask):
     Text = "Solving this puzzle will give you the next phone number to call and prove you're Telemarketopia material!"
-    From = 'karen_1'
-    From_Number_Label = Karen_Puzzle_Image_1
+    From_Number_Label = 'karen_1'
+    Image = Karen_Puzzle_Image_1
 
-async def send_text(TextClass, player_numer: PhoneNumber):
-    await add_task.send(TextClass(player_numer))
+class Karen2(TextTask):
+    Text = "Please call +1-510-256-7751 to continue learning about the exciting opportunities you'll have at Telemarketopia!"
+    From_Number_Label = 'karen_2'
+    Image = Telemarketopia_Logo
+
+async def send_text(TextClass, player_numer: PhoneNumber, delay=0):
+    await add_task.send(TextClass(player_numer, delay))
 
 # paths
 Path_Clavae = 'Clavae'
@@ -324,11 +336,49 @@ class TipLineScene(PathScene):
         }
     }
 
+
+class ClavaeAppeal(TeleRoom):
+    Name = "First Clavae Appeal"
+
+class ClavaeAccept(TeleRoom):
+    Name = "First Clavae Accepted"
+
+    async def get_audio_for_room(self, context: RoomContext):
+        await send_text(Clavae2, context.player.number, delay=126)
+        return await self.get_resource_for_path(context)
+
+
+class ClavaeAppeal(PathScene):
+    Name = "Clavae Appeal"
+    Start = []
+
+
+
+class KarenInitiation(TeleRoom):
+    Name = "Telemarketopia Initiation"
+
+    async def get_audio_for_room(self, context: RoomContext):
+        await send_text(Clavae1, context.player.number, delay=126)
+        return await self.get_resource_for_path(context)
+
+class TeleInitiation(PathScene):
+    Name = "Karen Initiation"
+    Start = [KarenInitiation]
+    Choices = {}
+
+Path_Assigned = "State_Path_Assigned"
+
 telemarketopia = Script(
     "Telemarketopia",
     {
         Script_New_State: {
-            Script_Any_Number: SceneAndState(TipLineScene(), Script_End_State)
+            "+18337594257": SceneAndState(TipLineScene(), Path_Assigned)
+        },
+        Path_Assigned: {
+            # karen
+            '+15102567675': SceneAndState(),
+            #clavae
+            '+15102567710': SceneAndState()
         }
     },
     TeleState()

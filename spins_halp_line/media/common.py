@@ -4,6 +4,8 @@ Conference_Hold_Music = RSResource(1003) # Hold music for conference system
 Shazbot = RSResource(1004) # short test audio from tribes
 Look_At_You_Hacker = RSResource(1005) # shodan quote
 
+Telemarketopia_Logo = RSResource(1095)
+
 # puzzle images
 Karen_Puzzle_Image_1 = RSResource(1002)
 Clavae_Puzzle_Image_1 = RSResource(1094)
@@ -17,6 +19,7 @@ All_Resources = [
     Conference_Hold_Music,
     Shazbot,
     Look_At_You_Hacker,
+    Telemarketopia_Logo,
     Karen_Puzzle_Image_1,
     Clavae_Puzzle_Image_1,
     Karen_Final_Puzzle_Image_1,
