@@ -772,8 +772,7 @@ class Script(Logger):
 
             request.player.set_script(self.name, script_info)  # should not be needed
         except Exception as e:
-            self.e(f'Got exception from scene.play: {e}')
-            traceback.print_tb(e.__traceback__)
+            self.e(f'Got exception from scene.play: {e}: {traceback.extract_tb(e.__traceback__).format()}')
             self.e(f'Returning generic confused response.')
             await error_sms(f'Player {request.player} in Scene {self} encountered an exception: {e}')
 

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from twilio.twiml.voice_response import VoiceResponse, Play, Gather, Hangup
 from twilio.base import values
+from twilio import rest
 import trio
 
 from .story_objects import (
@@ -21,6 +22,7 @@ from spins_halp_line.util import Logger
 from spins_halp_line.actions.conferences import new_conference, conferences, TwilConference
 from spins_halp_line.actions.twilio import send_sms
 from spins_halp_line.tasks import add_task, Task
+from spins_halp_line.constants import Credentials, Root_Url
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import (
     Karen_Puzzle_Image_1,
@@ -109,6 +111,7 @@ class TeleRoom(Room):
 
         return response
 
+
 class PathScene(Scene):
     Choices: Dict[Room, Dict[str, Dict[str, Union[Room, List[Room]]]]] = {}
     # Choices has a new structure here:
@@ -132,7 +135,6 @@ class PathScene(Scene):
                 for choice, room_choice in room_dict.items():
                     self._add_to_index(room_choice)
 
-
     def _get_choice_for_request(self, number: str, room: Room, script_state: ScriptInfo):
         path = script_state.data.get('path')
         # select path
@@ -141,7 +143,7 @@ class PathScene(Scene):
             # We just are using '*'
             room_choices = path_options.get(path,
                                             path_options.get('*')
-                           )
+                                            )
         else:
             # This could throw an exception, which is fine
             room_choices = path_options[path]
@@ -277,6 +279,7 @@ _player_in_first_conference = 'player_in_first_conference'
 _has_decision_text = 'player_has_decision_text'
 _path = 'path'
 _partner = 'ending_partner'
+_player_final_choice = 'final_choice'
 
 # paths
 Path_Clavae = 'Clavae'
@@ -456,6 +459,35 @@ class ConferenceTask(Task):
         await self.conference.play_sound(Conference_Nudge)
 
 
+class ClimaxTask(Task):
+
+    def __init__(self, clavae_player: PhoneNumber, clav_choice:str, karen_player:PhoneNumber, karen_choice:str):
+        super(ClimaxTask, self).__init__()
+        self.clavae_player = clavae_player
+        self.clav_choice = clav_choice
+        self.karen_player = karen_player
+        self.karen_choice = karen_choice
+
+    @property
+    def status_callback(self):
+        return '/'.join([Root_Url, 'climage', self.clav_choice, self.karen_choice])
+
+    async def execute(self):
+        twilio_client: rest.Client = rest.Client(Credentials["twilio"]["sid"], Credentials["twilio"]["token"])
+        from_number = Global_Number_Library.from_label("final")
+        twilio_client.calls.create(
+            url=self.status_callback,
+            to=self.clavae_player.e164,
+            from_=from_number.e164
+        )
+
+        twilio_client.calls.create(
+            url=self.status_callback,
+            to=self.karen_player.e164,
+            from_=from_number.e164
+        )
+
+
 class ConferenceChecker(TextHandler):
 
     async def new_text(self, context: RoomContext, text_request: TwilRequest):
@@ -468,6 +500,28 @@ class ConferenceChecker(TextHandler):
 
             if context.script.get(_has_decision_text):
                 self.d(f'new_text(context, {text_request.text_body})')
+                context.script[_player_final_choice] = text_request.text_body.strip()
+                partner = TelePlayer(context.script[_partner])
+                await partner.load()
+
+                # check if we have a choice
+                if partner.telemarketopia.get(_player_final_choice, False):
+                    if context.script[_path] == Path_Clavae:
+                        await add_task(
+                            ClimaxTask(text_request.caller,
+                                       context.script[_player_final_choice],
+                                       partner.number,
+                                       partner.telemarketopia[_player_final_choice]
+                                      )
+                        )
+                else:
+                    await add_task(
+                        ClimaxTask(partner.number,
+                                   partner.telemarketopia[_player_final_choice],
+                                   text_request.caller,
+                                   context.script[_player_final_choice]
+                                   )
+                    )
 
 
 # subclass to handle our specific needs around conferences
@@ -530,23 +584,30 @@ class TipLineStart(TeleRoom):
 
         return await self.get_resource_for_path(context)
 
+
 class TipLineRecruit(TeleRoom):
     Name = "Tip Line Recruit"
+
 
 class TipLineQuiz1(TeleRoom):
     Name = "Tip Line Quiz 1"
 
+
 class TipLineQuiz2(TeleRoom):
     Name = "Tip Line Quiz 2"
+
 
 class TipLineQuiz3(TeleRoom):
     Name = "Tip Line Quiz 3"
 
+
 class TipLineQuizResults(TeleRoom):
     Name = "Tip Line Quiz Results"
 
+
 class TipLineQuizOrientation(TeleRoom):
     Name = "Tip Line Quiz Orientation"
+
 
 class TipLineKarenText(TeleRoom):
     Name = "Tip Line Karen Text"
@@ -555,11 +616,14 @@ class TipLineKarenText(TeleRoom):
         await send_text(Karen1, context.player.number)
         return None
 
+
 class TipLineTip1(TeleRoom):
     Name = "Tip Line Tip 1"
 
+
 class TipLineTip2(TeleRoom):
     Name = "Tip Line Tip 2"
+
 
 class TipLineClavae(TeleRoom):
     Name = "Tip Line Clavae"
@@ -629,8 +693,10 @@ class TipLineScene(PathScene):
         }
     }
 
+
 class KarenInitiation(TeleRoom):
     Name = "Telemarketopia Initiation"
+
 
 class KarenAccepted(TeleRoom):
     Name = "Accepted Initialaiton"
@@ -640,6 +706,7 @@ class KarenAccepted(TeleRoom):
         await send_text(Karen2, context.player.number)
         return None
 
+
 class TeleInitiation(PathScene):
     Name = "Karen Initiation"
     Start = [KarenInitiation(), KarenAccepted()]
@@ -648,6 +715,7 @@ class TeleInitiation(PathScene):
 
 class ClavaeAppeal(TeleRoom):
     Name = "First Clavae Appeal"
+
 
 class ClavaeAccept(TeleRoom):
     Name = "First Clavae Accepted"
@@ -673,23 +741,30 @@ class DatabasePassword(TeleRoom):
     Name = "Database Password"
     Gather_Digits = 5
 
+
 class DatabaseMenu(TeleRoom):
     Name = "Database Menu"
+
 
 class DatabaseClassified(TeleRoom):
     Name = "Database Classified Files"
 
+
 class DatabaseSecretMemo(TeleRoom):
     Name = "Database Secret Memo"
+
 
 class DatabaseAIStart(TeleRoom):
     Name = "Database AI Start"
 
+
 class DatabaseAINewArrivals(TeleRoom):
     Name = "Database AI New Arrivals"
 
+
 class DatabaseAINewDepartures(TeleRoom):
     Name = "Database AI Departures"
+
 
 class DatabaseAIThirdCall(TeleRoom):
     Name = "Database AI Third Call"
@@ -699,9 +774,11 @@ class DatabaseAIThirdCall(TeleRoom):
         await send_text(ConfWait, context.player.number.e164)
         return await self.get_resource_for_path(context)
 
+
 class DatabaseCorrupted(TeleRoom):
     Name = "Database File Corrupted"
     Gather = False
+
 
 class Ghost(TeleRoom):
     Name = 'Ghost'
@@ -709,6 +786,7 @@ class Ghost(TeleRoom):
 
     async def get_audio_for_room(self, context: RoomContext):
         return Puppet_Master
+
 
 class Database(PathScene):
     Name = "Database"
@@ -760,13 +838,16 @@ class Database(PathScene):
 class TelemarketopiaPreOath(TeleRoom):
     Name = "Telemarketopia Oath"
 
+
 # name is INTENTIONALLY wrong
 class TelemarketopiOath(TeleRoom):
     Name = "Telemarketopia Promotion 1"
 
+
 # name is INTENTIONALLY wrong
 class TelemarketopiAcceptPromo(TeleRoom):
     Name = "Telemarketopia Accept Recruit"
+
 
 class TelemarketopiQueueForConf(TeleRoom):
     Name = "Telemarketopia Karen Queue For Conf"
@@ -775,6 +856,7 @@ class TelemarketopiQueueForConf(TeleRoom):
         context.shard.append(_kar_waiting_for_conf, context.player.number.e164)
         await send_text(ConfWait, context.player.number.e164)
         return await self.get_resource_for_path(context)
+
 
 class TelemarketopiaPromotionScene(PathScene):
     Name = "Telemarketopia Promotion"

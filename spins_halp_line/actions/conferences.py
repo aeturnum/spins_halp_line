@@ -198,11 +198,12 @@ class TwilConference(Logger):
         # global _conferences
         # global _conference_lock
 
+        # todo: figure out this whole async machine detection buisness
         async with LockManager(_twil_lock):
             _twilio_client.calls.create(
                 machine_detection='Enable',
-                async_amd='true',
-                async_amd_status_callback='',
+                # async_amd='true',
+                # async_amd_status_callback='',
                 url=self.twiml_callback,
                 to=number_to_call.e164,
                 from_=self.from_number.e164
@@ -258,7 +259,7 @@ async def new_conference(number: PhoneNumber) -> TwilConference:
     # global _conference_lock
 
     # will lock and unlock
-    new_conf = await TwilConference.create()
+    new_conf = await TwilConference.create(number)
 
     async with LockManager(_conference_lock):
         _conferences.append(new_conf)

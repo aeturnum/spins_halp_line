@@ -114,7 +114,7 @@ class TwilRequest(object):
         return 'SmsSid' in self._data
 
     @property
-    def text_body(self):
+    def text_body(self) -> str:
         return self._data.get('body')
 
     @property

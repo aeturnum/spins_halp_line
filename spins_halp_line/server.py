@@ -1,5 +1,6 @@
 import subprocess
 import json
+from typing import List
 
 from hypercorn.config import Config
 from hypercorn.trio import serve
@@ -10,15 +11,20 @@ import trio
 from functools import partial
 
 from trio import MemoryReceiveChannel
+from twilio.twiml.voice_response import VoiceResponse, Play
 
 from spins_halp_line.tasks import Trio_Task_Task_Object_Runner, GitUpdate, Task, add_task
 from spins_halp_line.twil import t_resp, TwilRequest
 from spins_halp_line.util import do_monkey_patches, get_logger
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import All_Resources
+from spins_halp_line.media.resource_space import RSResource
 from spins_halp_line.stories.story_objects import (
     Script,
     confused_response
+)
+from spins_halp_line.media.common import (
+    End_A, End_B, End_C, End_D, End_E, End_F, End_G, End_H, End_I, End_J
 )
 from spins_halp_line.stories.shipwreck_adventure import adventure
 from spins_halp_line.stories.telemarketopia import telemarketopia
@@ -128,6 +134,61 @@ async def handle_text():
 
     return t_resp("")
 
+
+#   _____ _ _                            _____
+#  / ____| (_)                          |  __ \
+# | |    | |_ _ __ ___   __ ___  _____  | |__) |___  ___ _ __   ___  _ __  ___  ___  ___
+# | |    | | | '_ ` _ \ / _` \ \/ / _ \ |  _  // _ \/ __| '_ \ / _ \| '_ \/ __|/ _ \/ __|
+# | |____| | | | | | | | (_| |>  <  __/ | | \ \  __/\__ \ |_) | (_) | | | \__ \  __/\__ \
+#  \_____|_|_|_| |_| |_|\__,_/_/\_\___| |_|  \_\___||___/ .__/ \___/|_| |_|___/\___||___/
+#                                                       | |
+#                                                       |_|
+
+async def get_ending_response(endings: List[RSResource]):
+    response = VoiceResponse()
+
+    for e in endings:
+        p = Play(url=e.url, loop=1)
+        response.append(p)
+
+    return t_resp(response)
+
+@app.route("/climax/1/1", methods=['GET', 'POST'])
+async def ending_cb():
+    return get_ending_response([End_C, End_B])
+
+@app.route("/climax/1/2", methods=['GET', 'POST'])
+async def ending_cb():
+    return get_ending_response([End_F, End_F, End_B])
+
+@app.route("/climax/1/3", methods=['GET', 'POST'])
+async def ending_cb():
+    return get_ending_response([End_A, End_E, End_F])
+
+@app.route("/climax/2/1", methods=['GET', 'POST'])
+async def ending_cb():
+    return get_ending_response([End_C, End_D])
+
+@app.route("/climax/2/2", methods=['GET', 'POST'])
+async def ending_cb():
+    return get_ending_response([End_D, End_D, End_G])
+
+@app.route("/climax/2/3", methods=['GET', 'POST'])
+async def ending_cb():
+    return get_ending_response([End_A, End_F, End_E, End_D])
+
+@app.route("/climax/3/1", methods=['GET', 'POST'])
+async def ending_cb():
+    return get_ending_response([End_C, End_A])
+
+@app.route("/climax/3/2", methods=['GET', 'POST'])
+async def ending_cb():
+    return get_ending_response([End_A, End_E, End_F])
+
+@app.route("/climax/3/3", methods=['GET', 'POST'])
+async def ending_cb():
+    return get_ending_response([End_H])
+
 #   _____             __                                _____      _ _ _                _
 #  / ____|           / _|                              / ____|    | | | |              | |
 # | |     ___  _ __ | |_ ___ _ __ ___ _ __   ___ ___  | |     __ _| | | |__   __ _  ___| | _____
@@ -182,9 +243,9 @@ async def debug_conf_call():
     num2 = PhoneNumber(req.data['num2'])
     from_num = Global_Number_Library.random()
 
-    conf = await new_conference()
-    await conf.add_participant(from_num, num1, play_first=Look_At_You_Hacker)
-    await conf.add_participant(from_num, num2, play_first=Shazbot)
+    conf = await new_conference(from_num)
+    await conf.add_participant(num1, play_first=Look_At_You_Hacker)
+    await conf.add_participant(num2, play_first=Shazbot)
 
     return ""
 
