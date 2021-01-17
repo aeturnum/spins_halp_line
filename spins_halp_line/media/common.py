@@ -20,6 +20,8 @@ Clavae_Conference_Intro = RSResource(1074)
 
 Puppet_Master = RSResource(1096)
 
+Conference_Nudge = RSResource(1050)
+
 End_A = RSResource(1052)
 End_B = RSResource(1053)
 End_C = RSResource(1054)
@@ -45,4 +47,15 @@ All_Resources = [
     Puppet_Master,
     Karen_Conference_Info,
     Clavae_Conference_Intro,
+    Conference_Nudge,
+    End_A,
+    End_B,
+    End_C,
+    End_D,
+    End_E,
+    End_F,
+    End_G,
+    End_H,
+    End_J,
+    End_I
 ]

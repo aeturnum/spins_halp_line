@@ -1,7 +1,6 @@
 from typing import Dict, Union, List, Optional
 from datetime import datetime, timedelta
 
-
 from twilio.twiml.voice_response import VoiceResponse, Play, Gather, Hangup
 from twilio.base import values
 import trio
@@ -18,6 +17,7 @@ from .story_objects import (
     TextHandler
 )
 
+from spins_halp_line.util import Logger
 from spins_halp_line.actions.conferences import new_conference, conferences, TwilConference
 from spins_halp_line.actions.twilio import send_sms
 from spins_halp_line.tasks import add_task, Task
@@ -206,7 +206,9 @@ class Clavae1(TextTask):
 
 
 class Clavae2(TextTask):
-    Text = "Once you fill this in, this puzzle should give you a five-digit code to get into the database.\n - Clavae"
+    Text = """"
+Once you fill this in, this puzzle should give you a five-digit code to get into the database at +1-510-256-7705!
+- Clavae"""
     From_Number_Label = 'clavae_2'
     Image = Clavae_Puzzle_Image_1
 
@@ -235,7 +237,7 @@ class ConfReady(TextTask):
     Image = Telemarketopia_Logo
 
 
-class KOptionsReady(TextTask):
+class KPostConfOptions(TextTask):
     Text = """
 Text one of the following to decide what you will do next:
 Text 1 if: I believe I have recruited the other team. Hooray! I will request a promotion from Telemarketopia!
@@ -244,7 +246,7 @@ Text 3 if: Attempt to Destroy Telemarketopia!!"""
     From_Number_Label = 'conference'
     Image = Telemarketopia_Logo
 
-class COptionsReady(TextTask):
+class CPostConfOptions(TextTask):
     Text = """
 Text one of the following to decide what you will do next:
 Text 1 if: The other team has convinced me to join Telemarketopia! I release my body and go forth in search of personal gain and power.
@@ -268,10 +270,12 @@ _got_text = 'got_text'
 #  \_____\___/|_| |_|_| \___|_|  \___|_| |_|\___\___|  \____/ \__,_|_| |_|_|\_\
 
 
-# texts
+# state keys
 _ready_for_conf = 'pickk'
 _player_in_first_conference = 'player_in_first_conference'
-
+_has_decision_text = 'player_has_decision_text'
+_path = 'path'
+_partner = 'ending_partner'
 
 # paths
 Path_Clavae = 'Clavae'
@@ -328,6 +332,16 @@ class TeleState(ScriptState):
             self._state[_kar_waiting_for_conf].append(pair[1])
 
 
+class TelePlayer(Player):
+
+    @property
+    def telemarketopia(self) -> Optional[dict]:
+        return self.scripts.get(Telemarketopia_Name).data
+
+    @property
+    def path(self) -> Optional[str]:
+        return self.telemarketopia.get(_path)
+
 class ConferenceTask(Task):
     def __init__(self, clavae_player: str, karen_player: str, shard: StateShard):
         super(ConferenceTask, self).__init__(0)
@@ -340,13 +354,13 @@ class ConferenceTask(Task):
         self.karen_script: Optional[dict] = None
 
     async def refresh_players(self):
-        clave_player = Player(self.clavae)
-        karen_player = Player(self.karen)
+        clave_player = TelePlayer(self.clavae)
+        karen_player = TelePlayer(self.karen)
         await clave_player.load()
         await karen_player.load()
 
-        self.karen_script = karen_player.scripts.get(Telemarketopia_Name)
-        self.clavae_script = clave_player.scripts.get(Telemarketopia_Name)
+        self.karen_script = karen_player.telemarketopia
+        self.clavae_script = clave_player.telemarketopia
 
     async def load_conference(self):
         from_number = Global_Number_Library.from_label('conference')
@@ -437,18 +451,54 @@ class ConferenceTask(Task):
         if not self.conference.started:
             return await self.return_players()
 
+        await trio.sleep(60 * 5)
+
+
 class ConferenceChecker(TextHandler):
 
     async def new_text(self, context: RoomContext, text_request: TwilRequest):
+        self.d(f'new_text(context, {text_request.text_body})')
         if text_request.num_called == Global_Number_Library.from_label('conference'):
             if not context.script.get(_player_in_first_conference, False):
+                self.d(f'new_text - player is agreeing to conf?')
                 # only set if they are not yet in their first conference
                 context.script[_ready_for_conf] = datetime.now().isoformat()
 
+            if context.script.get(_has_decision_text):
+                self.d(f'new_text(context, {text_request.text_body})')
+
+
 # subclass to handle our specific needs around conferences
-class ConferenceEventHandler:
-    async def event(self, conference:TwilConference, event: str):
-        return True
+class ConferenceEventHandler(Logger):
+    async def save_state_for_start(self, partipant: PhoneNumber, partner: PhoneNumber):
+        player = TelePlayer(partipant.e164)
+        await player.load()
+        player.telemarketopia[_player_in_first_conference] = True
+        player.telemarketopia[_partner] = partner.e164
+        await player.save()
+
+    async def event(self, conference:TwilConference, event: str, participant: str):
+        # first conference
+        if conference.from_number.e164 == Global_Number_Library.from_label('conference'):
+            if event == 'conference-start':
+                self.d(f"Conference with {conference.participants} started!")
+                p1 = conference.participants[0]
+                p2 = conference.participants[1]
+                await self.save_state_for_start(p1, p2)
+                await self.save_state_for_start(p2, p1)
+
+            if event == 'conference-leave':
+                player_left = TelePlayer(participant)
+                await player_left.load()
+                player_left.telemarketopia[_has_decision_text] = True
+                if player_left.path == Path_Clavae:
+                    await send_text(CPostConfOptions, PhoneNumber(participant))
+                else:
+                    await send_text(KPostConfOptions, PhoneNumber(participant))
+
+                await player_left.save()
+
+        return False
 
 
 TwilConference._custom_handlers.append(ConferenceEventHandler())
@@ -459,7 +509,7 @@ class TipLineStart(TeleRoom):
 
     async def get_audio_for_room(self, context: RoomContext):
         # we need to select a path
-        path = context.script.get('path', None)
+        path = context.script.get(_path, None)
         print(f'context shard in first room: {context.shard}')
         if path is None:
             print(f'context shard in first room: {context.shard}')
@@ -474,7 +524,7 @@ class TipLineStart(TeleRoom):
                 context.shard.append(_karen_players, context.player.number.e164)
 
             # set path!
-            context.script['path'] = path
+            context.script[_path] = path
 
         return await self.get_resource_for_path(context)
 

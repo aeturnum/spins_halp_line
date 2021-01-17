@@ -180,7 +180,7 @@ class TwilConference(Logger):
             if event_name == 'conference-start': # conference start, mark time
                 self.started = datetime.now()
 
-            dirty = dirty or await self.do_handle_event(self, event_name)
+            dirty = dirty or await self.do_handle_event(self, event_name, participant)
 
             if dirty:
                 await self._save_conference_list(True)
@@ -209,6 +209,7 @@ class TwilConference(Logger):
             )
 
         async with LockManager(_conference_lock):
+            self.participants.append(number_to_call)
             self.intros[number_to_call.e164] = play_first.id
             await self._save_conference_list(True)
 
@@ -251,7 +252,7 @@ async def new_conference(number: PhoneNumber) -> TwilConference:
 
     async with LockManager(_conference_lock):
         _conferences.append(new_conf)
-        await conf_class._save_conference_list(True)
+        await TwilConference._save_conference_list(True)
 
     return new_conf
 

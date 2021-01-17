@@ -53,6 +53,9 @@ class PhoneNumber:
             # Otherwise international
             return phonenumbers.format_number(self._e164, phonenumbers.PhoneNumberFormat.INTERNATIONAL)
 
+    def __repr__(self):
+        return self.e164
+
     def __str__(self):
         return self.friendly
 
