@@ -213,6 +213,13 @@ class TwilConference(Logger):
             self.intros[number_to_call.e164] = play_first.id
             await self._save_conference_list(True)
 
+
+    async def play_sound(self):
+        if not self.twil_sid:
+            return
+
+        async with LockManager(_twil_lock):
+
     async def twiml_xml(self, number_calling: PhoneNumber) -> VoiceResponse:
         response = VoiceResponse()
         if number_calling.e164 in self.intros:

@@ -693,8 +693,8 @@ class DatabaseAIThirdCall(TeleRoom):
     Name = "Database AI Third Call"
 
     async def get_audio_for_room(self, context: RoomContext):
-        context.shard.append(_clav_waiting_for_conf, context.player.number)
-        await send_text(ConfWait, context.player.number)
+        context.shard.append(_clav_waiting_for_conf, context.player.number.e164)
+        await send_text(ConfWait, context.player.number.e164)
         return await self.get_resource_for_path(context)
 
 class DatabaseCorrupted(TeleRoom):
@@ -770,8 +770,8 @@ class TelemarketopiQueueForConf(TeleRoom):
     Name = "Telemarketopia Karen Queue For Conf"
 
     async def get_audio_for_room(self, context: RoomContext):
-        context.shard.append(_kar_waiting_for_conf, context.player.number)
-        await send_text(ConfWait, context.player.number)
+        context.shard.append(_kar_waiting_for_conf, context.player.number.e164)
+        await send_text(ConfWait, context.player.number.e164)
         return await self.get_resource_for_path(context)
 
 class TelemarketopiaPromotionScene(PathScene):
