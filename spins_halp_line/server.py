@@ -16,7 +16,10 @@ from spins_halp_line.twil import t_resp, TwilRequest
 from spins_halp_line.util import do_monkey_patches, get_logger
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import All_Resources
-from spins_halp_line.stories.story_objects import Script, confused_response
+from spins_halp_line.stories.story_objects import (
+    Script,
+    confused_response
+)
 from spins_halp_line.stories.shipwreck_adventure import adventure
 from spins_halp_line.stories.telemarketopia import telemarketopia
 from spins_halp_line.events import event_websocket, send_event
@@ -116,11 +119,12 @@ async def main_number():
 @app.route("/tipline/sms", methods=['GET', 'POST'])
 async def handle_text():
     req = TwilRequest(request)
-    response = None
-
     await req.load()
 
-    print(f'Got text request: {req.str()}')
+    for script in Script.Active_Scripts:
+        if await script.player_playing(req):
+            await script.process_text(req)
+            break
 
     return t_resp("")
 

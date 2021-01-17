@@ -79,6 +79,7 @@ class ScriptInfo:
     state: str = Script_New_State
     scene_states: Dict[str, SceneInfo] = field(default_factory=dict)
     scene_history: List[str] = field(default_factory=list)
+    text_handler_states: Dict[str, Dict[Any, Any]] = field(default_factory=list)
     data: Dict[Any, Any] = field(default_factory=dict)  # the only field exposed to Rooms
 
     def add_scene(self, name: str) -> SceneInfo:
@@ -100,6 +101,7 @@ class ScriptInfo:
             state=d.get("state", Script_New_State),
             scene_states={k: SceneInfo.from_dict(v) for k, v in d.get("scene_states", {}).items()},
             scene_history=d.get('scene_history', []),
+            text_handler_states=d.get('text_handler_states', []),
             data=d.get('data', {})
         )
 

@@ -69,9 +69,20 @@ class StateShard(dict):
 
 class RoomContext(dict):
 
-    def __init__(self, player: Player, shard: StateShard, script_state: ScriptInfo, scene_state: SceneInfo, room_state: RoomInfo):
+    def __init__(self,
+                 player: Player,
+                 shard: StateShard,
+                 script_state: ScriptInfo,
+                 scene_state: SceneInfo,
+                 room_state: Union[RoomInfo, dict]):
         # fill with our info
-        super(RoomContext, self).__init__(room_state.data)
+        self_data = {}
+        if isinstance(room_state, RoomInfo):
+            self_data = room_state.data
+        elif isinstance(room_state, dict):
+            self_data = room_state
+
+        super(RoomContext, self).__init__(self_data)
 
         self.player = player
         self.shard = shard
@@ -87,7 +98,7 @@ class RoomContext(dict):
             self,
             script_state: ScriptInfo,
             scene_state: SceneInfo,
-            room_state: RoomInfo,
+            room_state: Union[RoomInfo, dict],
             spoil_state: bool = True):
         # In theory we should not need to pass the shard back here
         # because its structure prevents any objects being replaced
@@ -115,8 +126,10 @@ class RoomContext(dict):
                 room_state.state = self.state
                 room_state.fresh_state = True
 
-        for k, v in self.items():
-            room_state.data[k] = v
+        if isinstance(room_state, RoomInfo):
+            room_state.data.update(self)
+        elif isinstance(room_state, dict):
+            room_state.update(self)
 
         return script_state, scene_state, room_state
 
@@ -159,6 +172,36 @@ class RoomContext(dict):
 #  / ____ \| |_) \__ \ |_| | | (_| | (__| |_  | |_) | (_| \__ \  __/ | |____| | (_| \__ \__ \  __/\__ \
 # /_/    \_\_.__/|___/\__|_|  \__,_|\___|\__| |____/ \__,_|___/\___|  \_____|_|\__,_|___/___/\___||___/
 #
+
+class TextHandler(Logger):
+    Name = "Base Text Handler"
+
+    # Must add choice to room state outside of this
+    async def new_text(self, context: RoomContext, text_request: TwilRequest):
+        raise ValueError("Cannot use base class of Room")
+
+    # load any resources that we need
+    async def load(self):
+        pass
+
+    def __eq__(self, other):
+        if not isinstance(other, TextHandler):
+            return False
+
+        return other.Name == self.Name
+
+    def __hash__(self):
+        # todo: WARNING - this makes all copies of a room equivalent to another
+        # todo: This should be *fine* for now, but it means that we MUST only use
+        # todo: rooms in the _room_index of a scene, and never use a room in the
+        # todo: choices array. Otherwise we will lose any state in the rooms.
+        return self.Name.__hash__()
+
+    def __str__(self):
+        return f'TextHandler[{self.Name}]'
+
+    def __repr__(self):
+        return str(self)
 
 class Room(Logger):
     Name = "Base room"
@@ -570,7 +613,7 @@ class Script(Logger):
     # That way we can save progress on a per-script basis
     Active_Scripts = []
 
-    def __init__(self, name, structure: dict, state_object: ScriptState):
+    def __init__(self, name, structure: dict, state_object: ScriptState, text_handlers: List[TextHandler] = None):
         super(Script, self).__init__()
         self.name = name
         # structure format:
@@ -583,6 +626,12 @@ class Script(Logger):
         # got to give it the key
         state_object.set_key(self.db_key)
         self.state = state_object
+
+        
+        if text_handlers is None:
+            text_handlers = []
+
+        self.text_handlers: List[TextHandler] = text_handlers
 
     # Methods for dealing with making the basic structure
 
@@ -624,6 +673,43 @@ class Script(Logger):
 
         self.d(f"Can {request} start a new game? -> {scene_state is not None}")
         return scene_state is not None
+
+    async def process_text(self, request: TwilRequest):
+        self.d(f'process_text({request})')
+
+        if not request.is_text:
+            self.w(f'Request {request} is not a text! Aborting!')
+            return
+
+        script_info: ScriptInfo = request.player.script(self.name)
+
+        if script_info is None or script_info.is_complete:
+            self.d(f'Player {request.player} is not on our script, returning!')
+            return
+
+        scene_state: SceneAndState = self._get_scene_state(script_info, request.num_called)
+        scene_info = scene_state.scene._get_state(script_info)
+
+        for handler in self.text_handlers:
+            shard: StateShard = self.state.shard
+            text_state: dict = script_info.text_handler_states.get(handler.Name)
+
+            context = RoomContext(request.player, shard, script_info, scene_info, text_state)
+
+            await handler.new_text(context, request)
+
+            script_info, scene_info, text_state = context._pass_back_changes(
+                script_info,
+                scene_info,
+                text_state,
+                spoil_state=True  # the room state stops being fresh now
+            )
+
+            script_info.text_handler_states[handler.Name] = text_state
+
+
+
+        return
 
     async def play(self, request: TwilRequest):
         self.d(f'play({request})')

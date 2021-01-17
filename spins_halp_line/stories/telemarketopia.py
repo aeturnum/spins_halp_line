@@ -12,7 +12,8 @@ from .story_objects import (
     RoomContext,
     ScriptState,
     ScriptInfo,
-    StateShard
+    StateShard,
+    TextHandler
 )
 
 from spins_halp_line.actions.conferences import new_conference, conferences

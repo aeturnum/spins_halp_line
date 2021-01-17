@@ -47,6 +47,40 @@ from spins_halp_line.resources.numbers import PhoneNumber
 # 	ToZip:
 
 
+# Got text request: POST http://drex.space/tipline/sms
+# Headers:
+#   Remote-Addr: 127.0.0.1
+#   X-Real-Ip: 3.84.153.227
+#   X-Forwarded-For: 3.84.153.227
+#   Connection: upgrade
+#   Host: drex.space
+#   Content-Length: 433
+#   Content-Type: application/x-www-form-urlencoded
+#   X-Twilio-Signature: vZvHgP2eCCubgWTHrlFT81WRNcc=
+#   I-Twilio-Idempotency-Token: 29c1e818-35a4-4d17-b2e6-7f603b634780
+#   Accept: */*
+#   User-Agent: TwilioProxy/1.1
+# Body:
+#   ToCountry: US
+#   ToState: CA
+#   SmsMessageSid: SM658d9d4795633ae5370889e03d52ffa7
+#   NumMedia: 0
+#   ToCity: WALNUT CREEK
+#   FromZip: 12247
+#   SmsSid: SM658d9d4795633ae5370889e03d52ffa7
+#   FromState: NY
+#   SmsStatus: received
+#   FromCity: ALBANY
+#   Body: And I am unable to deceive
+#   FromCountry: US
+#   To: +15102567751
+#   ToZip: 94595
+#   NumSegments: 1
+#   MessageSid: SM658d9d4795633ae5370889e03d52ffa7
+#   AccountSid: AC7196e8082e73460f6c5c961109940e6d
+#   From: +15188109657
+#   ApiVersion: 2010-04-01
+
 # todo: add _loaded guards that throw exceptions
 class TwilRequest(object):
 
@@ -77,6 +111,18 @@ class TwilRequest(object):
         return self._data
 
     @property
+    def is_text(self):
+        return 'SmsSid' in self._data
+
+    @property
+    def text_body(self):
+        return self._data.get('body')
+
+    @property
+    def is_call(self):
+        return 'CallSid' in self._data
+
+    @property
     def caller(self) -> Optional[PhoneNumber]:
         if "From" in self.data:
             return PhoneNumber(self.data.get("From"))
@@ -86,6 +132,8 @@ class TwilRequest(object):
     def num_called(self) -> Optional[PhoneNumber]:
         if "Called" in self.data:
             return PhoneNumber(self.data.get("Called"))
+        if "To" in self.data:
+            return PhoneNumber(self.data.get("To"))
         return None
 
     @property
