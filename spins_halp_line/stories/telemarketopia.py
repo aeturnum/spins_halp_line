@@ -804,6 +804,7 @@ class Database(PathScene):
                 '1': DatabaseClassified(),
                 '2': DatabaseSecretMemo(),
                 '3': DatabaseAIStart(),
+                '*': DatabaseMenu()
             }
         },
         DatabaseClassified(): {
