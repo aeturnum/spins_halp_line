@@ -219,6 +219,7 @@ class TwilConference(Logger):
             return
 
         async with LockManager(_twil_lock):
+            pass
 
     async def twiml_xml(self, number_calling: PhoneNumber) -> VoiceResponse:
         response = VoiceResponse()
