@@ -214,12 +214,14 @@ class TwilConference(Logger):
             await self._save_conference_list(True)
 
 
-    async def play_sound(self):
+    async def play_sound(self, sound: RSResource):
         if not self.twil_sid:
             return
 
+        await sound.load()
+
         async with LockManager(_twil_lock):
-            pass
+            _twilio_client.conferences(self.twil_sid).update(announce_url=sound.url)
 
     async def twiml_xml(self, number_calling: PhoneNumber) -> VoiceResponse:
         response = VoiceResponse()

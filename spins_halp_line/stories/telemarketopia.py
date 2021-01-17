@@ -28,7 +28,8 @@ from spins_halp_line.media.common import (
     Telemarketopia_Logo,
     Puppet_Master,
     Clavae_Conference_Intro,
-    Karen_Conference_Info
+    Karen_Conference_Info,
+    Conference_Nudge
 )
 from spins_halp_line.twil import TwilRequest
 from spins_halp_line.player import Player
@@ -452,6 +453,7 @@ class ConferenceTask(Task):
             return await self.return_players()
 
         await trio.sleep(60 * 5)
+        await self.conference.play_sound(Conference_Nudge)
 
 
 class ConferenceChecker(TextHandler):
