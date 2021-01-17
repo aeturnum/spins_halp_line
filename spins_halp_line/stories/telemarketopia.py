@@ -29,6 +29,7 @@ from spins_halp_line.media.common import (
     Karen_Conference_Info
 )
 from spins_halp_line.twil import TwilRequest
+from spins_halp_line.player import Player
 from spins_halp_line.media.resource_space import RSResource
 from spins_halp_line.actions.conferences import TwilConference
 from spins_halp_line.constants import (
@@ -154,6 +155,16 @@ class PathScene(Scene):
 
         return queue
 
+
+#   _____           _       _      _____ _                        _    _____ _        _
+#  / ____|         (_)     | |    / ____| |                      | |  / ____| |      | |
+# | (___   ___ _ __ _ _ __ | |_  | (___ | |__   __ _ _ __ ___  __| | | (___ | |_ __ _| |_ ___
+#  \___ \ / __| '__| | '_ \| __|  \___ \| '_ \ / _` | '__/ _ \/ _` |  \___ \| __/ _` | __/ _ \
+#  ____) | (__| |  | | |_) | |_   ____) | | | | (_| | | |  __/ (_| |  ____) | || (_| | ||  __/
+# |_____/ \___|_|  |_| .__/ \__| |_____/|_| |_|\__,_|_|  \___|\__,_| |_____/ \__\__,_|\__\___|
+#                    | |
+#                    |_|
+
 #
 #  _______        _
 # |__   __|      | |
@@ -167,11 +178,11 @@ class TextTask(Task):
     Text = ""
     From_Number_Label = None
     Image = values.unset
-    
+
     def __init__(self, to: PhoneNumber, delay=0):
         super(TextTask, self).__init__(delay)
         self.to = to
-    
+
     async def execute(self):
         image = self.Image
         if self.Image != values.unset:
@@ -186,24 +197,29 @@ class TextTask(Task):
             image
         )
 
+
 class Clavae1(TextTask):
     Text = "Call me at +1-510-256-7710 to learn the horrible truth about Babyface's Telemarketopia!\n - Clavae"
     From_Number_Label = 'clavae_1'
+
 
 class Clavae2(TextTask):
     Text = "Once you fill this in, this puzzle should give you a five-digit code to get into the database.\n - Clavae"
     From_Number_Label = 'clavae_2'
     Image = Clavae_Puzzle_Image_1
 
+
 class Karen1(TextTask):
     Text = "Solving this puzzle will give you the next phone number to call and prove you're Telemarketopia material!"
     From_Number_Label = 'karen_1'
     Image = Karen_Puzzle_Image_1
 
+
 class Karen2(TextTask):
     Text = "Please call +1-510-256-7751 to continue learning about the exciting opportunities you'll have at Telemarketopia!"
     From_Number_Label = 'karen_2'
     Image = Telemarketopia_Logo
+
 
 class ConfWait(TextTask):
     Text = "Our systems are working on bisecting the quantum lagrange points, we'll connect you as soon as we can!"
@@ -211,18 +227,25 @@ class ConfWait(TextTask):
     Image = Telemarketopia_Logo
 
 
+class ConfReady(TextTask):
+    Text = "HEY!\nHey.\n I've got that person you wanted to talk to! Just text back anything when you're ready!!"
+    From_Number_Label = 'conference'
+    Image = Telemarketopia_Logo
+
+
 async def send_text(TextClass, player_numer: PhoneNumber, delay=0):
     await add_task.send(TextClass(player_numer, delay))
 
+Telemarketopia_Name = "Telemarketopia"
 
-#   _____           _       _      _____ _                        _    _____ _        _
-#  / ____|         (_)     | |    / ____| |                      | |  / ____| |      | |
-# | (___   ___ _ __ _ _ __ | |_  | (___ | |__   __ _ _ __ ___  __| | | (___ | |_ __ _| |_ ___
-#  \___ \ / __| '__| | '_ \| __|  \___ \| '_ \ / _` | '__/ _ \/ _` |  \___ \| __/ _` | __/ _ \
-#  ____) | (__| |  | | |_) | |_   ____) | | | | (_| | | |  __/ (_| |  ____) | || (_| | ||  __/
-# |_____/ \___|_|  |_| .__/ \__| |_____/|_| |_|\__,_|_|  \___|\__,_| |_____/ \__\__,_|\__\___|
-#                    | |
-#                    |_|
+_got_text = 'got_text'
+
+#   _____             __                                    _             _
+#  / ____|           / _|                                  | |           | |
+# | |     ___  _ __ | |_ ___ _ __ ___ _ __   ___ ___       | |_   _ _ __ | | __
+# | |    / _ \| '_ \|  _/ _ \ '__/ _ \ '_ \ / __/ _ \  _   | | | | | '_ \| |/ /
+# | |___| (_) | | | | ||  __/ | |  __/ | | | (_|  __/ | |__| | |_| | | | |   <
+#  \_____\___/|_| |_|_| \___|_|  \___|_| |_|\___\___|  \____/ \__,_|_| |_|_|\_\
 
 
 # subclass to handle our specific needs around conferences
@@ -236,6 +259,8 @@ class TeleConference(TwilConference):
 
         return False
 
+_ready_for_conf = 'pickk'
+
 class ConferenceTask(Task):
     def __init__(self, clavae_player: str, karen_player: str, shard: StateShard):
         super(ConferenceTask, self).__init__(0)
@@ -243,6 +268,18 @@ class ConferenceTask(Task):
         self.karen = karen_player
         self.shard = shard
         self.conference = None
+
+        self.clavae_player: Player = None
+        self.karen_player: Player = None
+
+    async def refresh_players(self, clavae_num, karen_num):
+        self.clave_player = Player(clavae_num)
+        self.karen_player = Player(karen_num)
+        await self.clave_player.load()
+        await self.karen_player.load()
+
+        self.karen_script = self.karen_player.scripts.get(Telemarketopia_Name)
+        self.clavae_script = self.clave_player.scripts.get(Telemarketopia_Name)
 
     async def load_conference(self):
         if not self.conference:
@@ -257,30 +294,51 @@ class ConferenceTask(Task):
     async def execute(self):
         conference = await new_conference(TeleConference)
         from_number = Global_Number_Library.from_label('conference')
+
         clavae_num = PhoneNumber(self.clavae)
         karen_num = PhoneNumber(self.karen)
 
-        while True:
-            # todo: add task to text players and see if they are ready
+        await send_text(ConfReady, clavae_num)
+        await send_text(ConfReady, karen_num)
 
-            # todo: also need a way to trigger the reduce loop from a task so we can re-match
-            # todo: players without a new person calling
+        # wait 5 secs
+        await trio.sleep(60)
+        await self.refresh_players(clavae_num, karen_num)
 
-            await trio.sleep(60 * 5)
+        # todo: add task to text players and see if they are ready
 
-            await conference.add_participant(
-                from_number,
-                clavae_num,
-                play_first=Clavae_Conference_Intro
-            )
+        clavae_ready = self.clavae_script.get(_got_text)
+        karen_ready = self.karen_script.get(_got_text)
 
-            await conference.add_participant(
-                from_number,
-                karen_num,
-                play_first=Karen_Conference_Info
-            )
+        if clavae_ready and not karen_ready or karen_ready and not clavae_ready:
+            await trio.sleep(60 * 3)
 
-            await trio.sleep(30)
+
+
+        # todo: also need a way to trigger the reduce loop from a task so we can re-match
+        # todo: players without a new person calling
+
+        await conference.add_participant(
+            from_number,
+            clavae_num,
+            play_first=Clavae_Conference_Intro
+        )
+
+        await conference.add_participant(
+            from_number,
+            karen_num,
+            play_first=Karen_Conference_Info
+        )
+
+        await trio.sleep(30)
+
+
+class ConferenceChecker(TextHandler):
+
+    async def new_text(self, context: RoomContext, text_request: TwilRequest):
+        if text_request.num_called == Global_Number_Library.from_label('conference'):
+            context.script[_ready_for_conf] = 'true'
+
 
 # paths
 Path_Clavae = 'Clavae'
@@ -291,7 +349,7 @@ _clavae_players = 'clave_players'
 _karen_players = 'karen_players'
 _clav_waiting_for_conf = 'clave_play_waiting_for_conf'
 _kar_waiting_for_conf = 'karen_play_waiting_for_conf'
-_pairs_being_paired = 'conferences_pairs_in_progress'
+_waiting_for_conf = 'conferences_pairs_in_progress'
 _pair_waiting_for_2nd_conf = 'karen_clave_players_last_conf'
 
 class TeleState(ScriptState):
@@ -303,7 +361,7 @@ class TeleState(ScriptState):
                 _karen_players: [],
                 _clav_waiting_for_conf: [],
                 _kar_waiting_for_conf: [],
-                _pairs_being_paired: [],
+                _waiting_for_conf: [],
                 _pair_waiting_for_2nd_conf: [],
             }
         )
@@ -319,7 +377,7 @@ class TeleState(ScriptState):
             # conference time baby!
             clav_p = state[_clav_waiting_for_conf].pop(0)
             karen_p = state[_kar_waiting_for_conf].pop(0)
-            state[_pairs_being_paired].append([clav_p, karen_p])
+            state[_waiting_for_conf].append([clav_p, karen_p])
             await add_task.send(
                 ConferenceTask(
                     state[_clav_waiting_for_conf].pop(0),
@@ -332,9 +390,9 @@ class TeleState(ScriptState):
 
     async def _after_load(self):
         # WE ARE LOCKED HERE
-        for pair in self._state[_pairs_being_paired]:
+        for pair in self._state.get(_waiting_for_conf, []):
             self._state[_clav_waiting_for_conf].append(pair[0])
-            self._state[_clav_waiting_for_conf].append(pair[1])
+            self._state[_kar_waiting_for_conf].append(pair[1])
 
 
 class TipLineStart(TeleRoom):
@@ -643,7 +701,7 @@ Third_Call_Done = "State_Second_Call_Done"
 # todo
 
 telemarketopia = Script(
-    "Telemarketopia",
+    Telemarketopia_Name,
     {
         Script_New_State: {
             "+18337594257": SceneAndState(TipLineScene(), Path_Assigned)
