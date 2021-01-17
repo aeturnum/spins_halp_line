@@ -33,6 +33,7 @@ Conf_Status_Path = "/conf/status/<c_number>"
 class TwilConference(Logger):
 
     _callbacks = " ".join(['start', 'end', 'leave', 'join'])
+    _custom_handlers = []
 
     # This function does not use the global conference lock because trio locks are not reentrant and
     # in theory that should be fine? We should only call this once a lock is established and EVEN IF WE DON'T,
@@ -58,18 +59,16 @@ class TwilConference(Logger):
                 _last_conference = int_id
 
             participants = [PhoneNumber(p) for p in saved_data['participants']]
+            from_num = saved_data.get('from')
             sid = saved_data.get('sid', "")
             started = saved_data.get('started', None)
             if started:
                 started = datetime.fromisoformat(started)
 
-            return TwilConference(int_id, participants, sid, started)
-
-    def do_create(self, new_id):
-        return TwilConference(new_id)
+            return TwilConference(int_id, from_num, participants, sid, started)
 
     @classmethod
-    async def create(cls, locked=None) -> 'TwilConference':
+    async def create(cls, number:PhoneNumber, locked=None) -> 'TwilConference':
         # global _conference_lock
         global _last_conference
 
@@ -77,9 +76,9 @@ class TwilConference(Logger):
             new_id = _last_conference + 1
             _last_conference = new_id
 
-            return self.do_create(new_id)
+            return TwilConference(new_id, number)
 
-    def __init__(self, id_, participants=None, sid=None, started=None):
+    def __init__(self, id_, from_number:PhoneNumber, participants=None, sid=None, started=None):
         super(TwilConference, self).__init__()
         if not participants:
             participants = []
@@ -88,6 +87,7 @@ class TwilConference(Logger):
             sid = ""
 
         self.id: int = id_
+        self.from_number = from_number
         # This is the real thing we need to make changes
         # We should get it on callback
         self.twil_sid: str = sid
@@ -123,6 +123,7 @@ class TwilConference(Logger):
             started = self.started.isoformat()
         return {
             'id': self.id,
+            'from': self.from_number.e164,
             'participants': [p.e164 for p in self.participants],
             'sid': self.twil_sid,
             'started': started,
@@ -179,7 +180,7 @@ class TwilConference(Logger):
             if event_name == 'conference-start': # conference start, mark time
                 self.started = datetime.now()
 
-            dirty = dirty or await self.do_handle_event(event_name, participant)
+            dirty = dirty or await self.do_handle_event(self, event_name)
 
             if dirty:
                 await self._save_conference_list(True)
@@ -188,9 +189,10 @@ class TwilConference(Logger):
 
     # Override this to do custom event handling
     async def do_handle_event(self, event, participant):
-        return False
+        for handler in self._custom_handlers:
+            await handler.event(self, event, participant)
 
-    async def add_participant(self, from_number: PhoneNumber, number_to_call: PhoneNumber, play_first: RSResource=None):
+    async def add_participant(self, number_to_call: PhoneNumber, play_first: RSResource=None):
         # global _twil_lock
         # global _twilio_client
         # global _conferences
@@ -203,7 +205,7 @@ class TwilConference(Logger):
                 async_amd_status_callback='',
                 url=self.twiml_callback,
                 to=number_to_call.e164,
-                from_=from_number.e164
+                from_=self.from_number.e164
             )
 
         async with LockManager(_conference_lock):
@@ -240,12 +242,12 @@ class TwilConference(Logger):
         return f'Conf[{self.id}]'
 
 
-async def new_conference(conf_class=TwilConference) -> TwilConference:
+async def new_conference(number: PhoneNumber) -> TwilConference:
     # global _conferences
     # global _conference_lock
 
     # will lock and unlock
-    new_conf = await conf_class.create()
+    new_conf = await TwilConference.create()
 
     async with LockManager(_conference_lock):
         _conferences.append(new_conf)

@@ -20,6 +20,17 @@ from spins_halp_line.events import send_event
 from spins_halp_line.errors import StoryNavigationException
 from spins_halp_line.actions.errors import error_sms
 
+class ReductionTask(Task):
+    def __init__(self, state:'ScriptState'):
+        super(ReductionTask, self).__init__()
+        # remember that Task supports a delay arg if we need it
+        self.state = state
+
+    async def execute(self):
+        self.d(f'ReductionTask')
+        await self.state.reduce()
+        self.d(f'ReductionTask done')
+
 class StateShard(dict):
     def __init__(self, state: dict, parent):
         super(StateShard, self).__init__()
@@ -61,6 +72,9 @@ class StateShard(dict):
             change['value'] = vals[1]
 
         self._changes.append(change)
+
+    async def trigger_reduction(self):
+        await add_task(ReductionTask(self._parent))
 
     async def integrate(self):
         # this works because python just doesn't care about circular references

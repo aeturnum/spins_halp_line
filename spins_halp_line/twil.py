@@ -4,7 +4,6 @@ from typing import Optional
 from spins_halp_line.player import Player
 from spins_halp_line.resources.numbers import PhoneNumber
 
-
 #
 # POST http://drex.space/tipline/start
 # Headers:

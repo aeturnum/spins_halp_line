@@ -1,4 +1,6 @@
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Optional
+from datetime import datetime, timedelta
+
 
 from twilio.twiml.voice_response import VoiceResponse, Play, Gather, Hangup
 from twilio.base import values
@@ -16,7 +18,7 @@ from .story_objects import (
     TextHandler
 )
 
-from spins_halp_line.actions.conferences import new_conference, conferences
+from spins_halp_line.actions.conferences import new_conference, conferences, TwilConference
 from spins_halp_line.actions.twilio import send_sms
 from spins_halp_line.tasks import add_task, Task
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
@@ -233,6 +235,24 @@ class ConfReady(TextTask):
     Image = Telemarketopia_Logo
 
 
+class KOptionsReady(TextTask):
+    Text = """
+Text one of the following to decide what you will do next:
+Text 1 if: I believe I have recruited the other team. Hooray! I will request a promotion from Telemarketopia!
+Text 2 if: The other team has convinced me to open a Doortal to release Madame Clavae. 
+Text 3 if: Attempt to Destroy Telemarketopia!!"""
+    From_Number_Label = 'conference'
+    Image = Telemarketopia_Logo
+
+class COptionsReady(TextTask):
+    Text = """
+Text one of the following to decide what you will do next:
+Text 1 if: The other team has convinced me to join Telemarketopia! I release my body and go forth in search of personal gain and power.
+Text 2 if: I believe I have convinced the other team to open a Doortal. Hooray! I’ll tell Madame Clavae the good news.
+Text 3 if: Attempt to Destroy Telemarketopia!!"""
+    From_Number_Label = 'conference'
+    Image = Telemarketopia_Logo
+
 async def send_text(TextClass, player_numer: PhoneNumber, delay=0):
     await add_task.send(TextClass(player_numer, delay))
 
@@ -248,18 +268,9 @@ _got_text = 'got_text'
 #  \_____\___/|_| |_|_| \___|_|  \___|_| |_|\___\___|  \____/ \__,_|_| |_|_|\_\
 
 
-# subclass to handle our specific needs around conferences
-class TeleConference(TwilConference):
-
-    def do_create(self, new_id):
-        return TeleConference(new_id)
-
-    # do the things we need to do once players leave the conference
-    async def do_handle_event(self, event, participant):
-
-        return False
-
+# texts
 _ready_for_conf = 'pickk'
+_player_in_first_conference = 'player_in_first_conference'
 
 
 # paths
@@ -323,10 +334,10 @@ class ConferenceTask(Task):
         self.clavae: PhoneNumber = PhoneNumber(clavae_player)
         self.karen: PhoneNumber = PhoneNumber(karen_player)
         self.shard = shard
-        self.conference = None
+        self.conference: TwilConference = None
 
-        self.clavae_script: dict = None
-        self.karen_script: dict = None
+        self.clavae_script: Optional[dict] = None
+        self.karen_script: Optional[dict] = None
 
     async def refresh_players(self):
         clave_player = Player(self.clavae)
@@ -338,9 +349,9 @@ class ConferenceTask(Task):
         self.clavae_script = clave_player.scripts.get(Telemarketopia_Name)
 
     async def load_conference(self):
+        from_number = Global_Number_Library.from_label('conference')
         if not self.conference:
-            self.conference = await new_conference(TeleConference)
-            return self.conference
+            self.conference = await new_conference(from_number)
 
         for conf in conferences():
             if conf == self.conference:
@@ -348,7 +359,6 @@ class ConferenceTask(Task):
                 return conf
 
     async def execute(self):
-        self.conference = await new_conference(TeleConference)
 
         await send_text(ConfReady, self.clavae)
         await send_text(ConfReady, self.karen)
@@ -358,8 +368,15 @@ class ConferenceTask(Task):
     async def check_player_status(self):
         await self.refresh_players()
 
-        clavae_ready = self.clavae_script.get(_got_text)
-        karen_ready = self.karen_script.get(_got_text)
+        # cheeck to make sure we've seen them within last 5
+        clavae_ready = self.clavae_script.get(_got_text, None)
+        if clavae_ready:
+            clavae_ready = datetime.fromisoformat(clavae_ready)
+            clavae_ready = timedelta(seconds=60 * 5) < (datetime.now() - clavae_ready)
+        karen_ready = self.karen_script.get(_got_text, None)
+        if karen_ready:
+            karen_ready = datetime.fromisoformat(karen_ready)
+            karen_ready = timedelta(seconds=60 * 5) < (datetime.now() - karen_ready)
 
         return clavae_ready, karen_ready
 
@@ -375,8 +392,8 @@ class ConferenceTask(Task):
         kr_again = False
         cr_again = False
         while not c_r and not k_r:
-            for x in range(0, 10):
-                await trio.sleep(1)
+            for x in range(0, 3):
+                await trio.sleep(10)
             c_r, k_r = await self.check_player_status()
             count += 1
 
@@ -401,29 +418,40 @@ class ConferenceTask(Task):
         self.shard.append(_kar_waiting_for_conf, self.karen.e164, to_front=not c_r)
 
         await self.shard.integrate()
+        await self.shard.trigger_reduction()
 
     async def call_players(self):
-        from_number = Global_Number_Library.from_label('conference')
-
         await self.conference.add_participant(
-            from_number,
             self.clavae,
             play_first=Clavae_Conference_Intro
         )
 
         await self.conference.add_participant(
-            from_number,
             self.karen,
             play_first=Karen_Conference_Info
         )
 
         await trio.sleep(30)
 
+        await self.load_conference()
+        if not self.conference.started:
+            return await self.return_players()
+
 class ConferenceChecker(TextHandler):
 
     async def new_text(self, context: RoomContext, text_request: TwilRequest):
         if text_request.num_called == Global_Number_Library.from_label('conference'):
-            context.script[_ready_for_conf] = 'true'
+            if not context.script.get(_player_in_first_conference, False):
+                # only set if they are not yet in their first conference
+                context.script[_ready_for_conf] = datetime.now().isoformat()
+
+# subclass to handle our specific needs around conferences
+class ConferenceEventHandler(TwilConference):
+    async def event(self, conference:TwilConference, event: str):
+        return True
+
+
+TwilConference._custom_handlers.append(ConferenceEventHandler())
 
 
 class TipLineStart(TeleRoom):

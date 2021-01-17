@@ -20,6 +20,17 @@ Clavae_Conference_Intro = RSResource(1074)
 
 Puppet_Master = RSResource(1096)
 
+End_A = RSResource(1052)
+End_B = RSResource(1053)
+End_C = RSResource(1054)
+End_D = RSResource(1055)
+End_E = RSResource(1056)
+End_F = RSResource(1057)
+End_G = RSResource(1058)
+End_H = RSResource(1059)
+End_J = RSResource(1060)
+End_I = RSResource(1097)
+
 All_Resources = [
     Conference_Hold_Music,
     Shazbot,
