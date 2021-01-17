@@ -291,6 +291,7 @@ _clavae_players = 'clave_players'
 _karen_players = 'karen_players'
 _clav_waiting_for_conf = 'clave_play_waiting_for_conf'
 _kar_waiting_for_conf = 'karen_play_waiting_for_conf'
+_pairs_being_paired = 'conferences_pairs_in_progress'
 _pair_waiting_for_2nd_conf = 'karen_clave_players_last_conf'
 
 class TeleState(ScriptState):
@@ -302,6 +303,7 @@ class TeleState(ScriptState):
                 _karen_players: [],
                 _clav_waiting_for_conf: [],
                 _kar_waiting_for_conf: [],
+                _pairs_being_paired: [],
                 _pair_waiting_for_2nd_conf: [],
             }
         )
@@ -315,6 +317,9 @@ class TeleState(ScriptState):
         karen_waiting = state.get(_kar_waiting_for_conf)
         if len(clave_waiting) > 1 and len(karen_waiting) > 1:
             # conference time baby!
+            clav_p = state[_clav_waiting_for_conf].pop(0)
+            karen_p = state[_kar_waiting_for_conf].pop(0)
+            state[_pairs_being_paired].append([clav_p, karen_p])
             await add_task.send(
                 ConferenceTask(
                     state[_clav_waiting_for_conf].pop(0),
@@ -324,6 +329,13 @@ class TeleState(ScriptState):
             )
 
         return state
+
+    async def _after_load(self):
+        # WE ARE LOCKED HERE
+        for pair in self._state[_pairs_being_paired]:
+            self._state[_clav_waiting_for_conf].append(pair[0])
+            self._state[_clav_waiting_for_conf].append(pair[1])
+
 
 class TipLineStart(TeleRoom):
     Name = "Tip Line Start"

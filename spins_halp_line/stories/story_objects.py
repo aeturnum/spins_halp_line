@@ -579,8 +579,13 @@ class ScriptState(Logger):
                     self._state = json.loads(db_data)
                 except Exception:
                     pass
+            await self._after_load()
 
             self.d(f'load_from_redis: loaded state dict {self._state}')
+
+    async def _after_load(self):
+        # WE ARE LOCKED HERE
+        pass
 
 class AfterRequestActions(Task):
 
@@ -627,7 +632,6 @@ class Script(Logger):
         state_object.set_key(self.db_key)
         self.state = state_object
 
-        
         if text_handlers is None:
             text_handlers = []
 
@@ -706,8 +710,6 @@ class Script(Logger):
             )
 
             script_info.text_handler_states[handler.Name] = text_state
-
-
 
         return
 
