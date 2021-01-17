@@ -446,7 +446,7 @@ class ConferenceChecker(TextHandler):
                 context.script[_ready_for_conf] = datetime.now().isoformat()
 
 # subclass to handle our specific needs around conferences
-class ConferenceEventHandler(TwilConference):
+class ConferenceEventHandler:
     async def event(self, conference:TwilConference, event: str):
         return True
 
