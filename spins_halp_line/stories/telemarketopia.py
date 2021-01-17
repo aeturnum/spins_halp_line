@@ -261,84 +261,6 @@ class TeleConference(TwilConference):
 
 _ready_for_conf = 'pickk'
 
-class ConferenceTask(Task):
-    def __init__(self, clavae_player: str, karen_player: str, shard: StateShard):
-        super(ConferenceTask, self).__init__(0)
-        self.clavae = clavae_player
-        self.karen = karen_player
-        self.shard = shard
-        self.conference = None
-
-        self.clavae_player: Player = None
-        self.karen_player: Player = None
-
-    async def refresh_players(self, clavae_num, karen_num):
-        self.clave_player = Player(clavae_num)
-        self.karen_player = Player(karen_num)
-        await self.clave_player.load()
-        await self.karen_player.load()
-
-        self.karen_script = self.karen_player.scripts.get(Telemarketopia_Name)
-        self.clavae_script = self.clave_player.scripts.get(Telemarketopia_Name)
-
-    async def load_conference(self):
-        if not self.conference:
-            self.conference = await new_conference(TeleConference)
-            return self.conference
-
-        for conf in conferences():
-            if conf == self.conference:
-                # this *should* not matter but I am past dealing with instance fuckary
-                return conf
-
-    async def execute(self):
-        conference = await new_conference(TeleConference)
-        from_number = Global_Number_Library.from_label('conference')
-
-        clavae_num = PhoneNumber(self.clavae)
-        karen_num = PhoneNumber(self.karen)
-
-        await send_text(ConfReady, clavae_num)
-        await send_text(ConfReady, karen_num)
-
-        # wait 5 secs
-        await trio.sleep(60)
-        await self.refresh_players(clavae_num, karen_num)
-
-        # todo: add task to text players and see if they are ready
-
-        clavae_ready = self.clavae_script.get(_got_text)
-        karen_ready = self.karen_script.get(_got_text)
-
-        if clavae_ready and not karen_ready or karen_ready and not clavae_ready:
-            await trio.sleep(60 * 3)
-
-
-
-        # todo: also need a way to trigger the reduce loop from a task so we can re-match
-        # todo: players without a new person calling
-
-        await conference.add_participant(
-            from_number,
-            clavae_num,
-            play_first=Clavae_Conference_Intro
-        )
-
-        await conference.add_participant(
-            from_number,
-            karen_num,
-            play_first=Karen_Conference_Info
-        )
-
-        await trio.sleep(30)
-
-
-class ConferenceChecker(TextHandler):
-
-    async def new_text(self, context: RoomContext, text_request: TwilRequest):
-        if text_request.num_called == Global_Number_Library.from_label('conference'):
-            context.script[_ready_for_conf] = 'true'
-
 
 # paths
 Path_Clavae = 'Clavae'
@@ -393,6 +315,115 @@ class TeleState(ScriptState):
         for pair in self._state.get(_waiting_for_conf, []):
             self._state[_clav_waiting_for_conf].append(pair[0])
             self._state[_kar_waiting_for_conf].append(pair[1])
+
+
+class ConferenceTask(Task):
+    def __init__(self, clavae_player: str, karen_player: str, shard: StateShard):
+        super(ConferenceTask, self).__init__(0)
+        self.clavae: PhoneNumber = PhoneNumber(clavae_player)
+        self.karen: PhoneNumber = PhoneNumber(karen_player)
+        self.shard = shard
+        self.conference = None
+
+        self.clavae_script: dict = None
+        self.karen_script: dict = None
+
+    async def refresh_players(self):
+        clave_player = Player(self.clavae)
+        karen_player = Player(self.karen)
+        await clave_player.load()
+        await karen_player.load()
+
+        self.karen_script = karen_player.scripts.get(Telemarketopia_Name)
+        self.clavae_script = clave_player.scripts.get(Telemarketopia_Name)
+
+    async def load_conference(self):
+        if not self.conference:
+            self.conference = await new_conference(TeleConference)
+            return self.conference
+
+        for conf in conferences():
+            if conf == self.conference:
+                # this *should* not matter but I am past dealing with instance fuckary
+                return conf
+
+    async def execute(self):
+        self.conference = await new_conference(TeleConference)
+
+        await send_text(ConfReady, self.clavae)
+        await send_text(ConfReady, self.karen)
+
+        await self.wait_for_players()
+
+    async def check_player_status(self):
+        await self.refresh_players()
+
+        clavae_ready = self.clavae_script.get(_got_text)
+        karen_ready = self.karen_script.get(_got_text)
+
+        return clavae_ready, karen_ready
+
+    async def wait_for_players(self):
+        # wait 1 min
+        await trio.sleep(60)
+        await self.refresh_players()
+
+        # todo: add task to text players and see if they are ready
+        c_r, k_r = await self.check_player_status()
+
+        count = 60
+        kr_again = False
+        cr_again = False
+        while not c_r and not k_r:
+            for x in range(0, 10):
+                await trio.sleep(1)
+            c_r, k_r = await self.check_player_status()
+            count += 1
+
+            if count > 60 * 5:
+                # text again if no response and
+                if not c_r and not cr_again:
+                    cr_again = True
+                    await send_text(ConfReady, self.clavae)
+
+                if not k_r and not kr_again:
+                    kr_again = True
+                    await send_text(ConfReady, self.clavae)
+
+            if count > 60 * 10:
+                return await self.return_players()
+
+        return await self.call_players()
+
+    async def return_players(self):
+        c_r, k_r = await self.check_player_status()
+        self.shard.append(_clav_waiting_for_conf, self.clavae.e164, to_front=not c_r)
+        self.shard.append(_kar_waiting_for_conf, self.karen.e164, to_front=not c_r)
+
+        await self.shard.integrate()
+
+    async def call_players(self):
+        from_number = Global_Number_Library.from_label('conference')
+
+        await self.conference.add_participant(
+            from_number,
+            self.clavae,
+            play_first=Clavae_Conference_Intro
+        )
+
+        await self.conference.add_participant(
+            from_number,
+            self.karen,
+            play_first=Karen_Conference_Info
+        )
+
+        await trio.sleep(30)
+
+class ConferenceChecker(TextHandler):
+
+    async def new_text(self, context: RoomContext, text_request: TwilRequest):
+        if text_request.num_called == Global_Number_Library.from_label('conference'):
+            context.script[_ready_for_conf] = 'true'
 
 
 class TipLineStart(TeleRoom):
@@ -719,5 +750,6 @@ telemarketopia = Script(
             "+15102567705": SceneAndState(Database(), Third_Call_Done)
         }
     },
-    TeleState()
+    TeleState(),
+    text_handlers=[ConferenceChecker()]
 )

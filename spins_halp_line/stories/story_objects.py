@@ -36,12 +36,13 @@ class StateShard(dict):
     def __setitem__(self, key, value):
         raise ValueError("StateShard's cannot be changed - use append!")
 
-    def append(self, key, *vals):
+    def append(self, key, *vals, to_front=False):
         if key not in self:
             raise ValueError("Cannot append to things that aren't here!")
 
         change = {
             'to': key,
+            'to_front':to_front
         }
 
         if isinstance(self[key], list):
@@ -518,7 +519,11 @@ class ScriptState(Logger):
                 if 'key' in change:
                     self._state[to][change['key']] = value
                 else:
-                    self._state[to].extend(value)
+                    if change['to_front']:
+                        for v in value:
+                            self.state[to].insert(0, v)
+                    else:
+                        self._state[to].extend(value)
 
             await self.save_to_redis(True)
 
