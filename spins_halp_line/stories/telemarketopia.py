@@ -803,7 +803,7 @@ class TelemarketopiaPromotionScene(PathScene):
 
 Path_Assigned = "State_Path_Assigned"
 Second_Call_Done = "State_Second_Call_Done"
-Third_Call_Done = "State_Second_Call_Done"
+Third_Call_Done = "State_Third_Call_Done"
 
 # todo: Put a function into Script that will handle texts that we get from twilio
 # todo: Then we need a method of updating player state and also updating shared script state
