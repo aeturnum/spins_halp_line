@@ -379,11 +379,30 @@ class TeleState(ScriptState):
         for pair in to_remove:
             state[_pair_waiting_for_2nd_conf].remove(pair)
 
+        remove_from_clav = []
+        remove_from_kar = []
+        clave = state.get(_clavae_players)
+        karen = state.get(_karen_players)
+        for player in clave:
+            if player in karen:
+                if len(karen) > len(karen):
+                    print(f"Player {player} is in both queues, removing from Karen because that one is longer")
+                    remove_from_kar.append(player)
+                else:
+                    print(f"Player {player} is in both queues, removing from Clavae because that one is longer")
+                    remove_from_clav.append(player)
+
+        for player in remove_from_clav:
+            state.get(_clavae_players).remove(player)
+
+        for player in remove_from_kar:
+            state.get(_karen_players).remove(player)
+
         print("duplicates_removed!")
         print(f'do_reduce:{state}')
         print(f'clav_waiting:{clave_waiting}({len(clave_waiting)})')
         print(f'karen_waiting:{karen_waiting}({len(karen_waiting)})')
-        if len(clave_waiting) > 1 and len(karen_waiting) > 1:
+        if len(clave_waiting) >= 1 and len(karen_waiting) >= 1:
             # conference time baby!
             clav_p = state[_clav_waiting_for_conf].pop(0)
             karen_p = state[_kar_waiting_for_conf].pop(0)
