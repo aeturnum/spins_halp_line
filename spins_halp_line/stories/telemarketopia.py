@@ -1023,7 +1023,7 @@ class DatabaseAIThirdCall(TeleRoom):
 
     async def get_audio_for_room(self, context: RoomContext):
         context.shard.append(_clav_waiting_for_conf, context.player.number.e164)
-        await send_text(ConfWait, context.player.number.e164)
+        await send_text(ConfWait, context.player.number)
         return await self.get_resource_for_path(context)
 
 
@@ -1107,7 +1107,7 @@ class TelemarketopiQueueForConf(TeleRoom):
 
     async def get_audio_for_room(self, context: RoomContext):
         context.shard.append(_kar_waiting_for_conf, context.player.number.e164)
-        await send_text(ConfWait, context.player.number.e164)
+        await send_text(ConfWait, context.player.number)
         return await self.get_resource_for_path(context)
 
 
