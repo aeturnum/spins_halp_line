@@ -355,8 +355,19 @@ class TeleState(ScriptState):
         # todo: think about doing something about how recently players have been active?
         # todo: players who have been out for a while might not want to play
 
+
+        # move remove people who have been moved back
         clave_waiting = state.get(_clav_waiting_for_conf)
         karen_waiting = state.get(_kar_waiting_for_conf)
+        to_remove = []
+        for pair in [_waiting_for_conf]:
+            if pair[0] in clave_waiting and pair[1] in karen_waiting:
+                to_remove.append(pair)
+
+        # actually remove the things we just found
+        for pair in to_remove:
+            state[_pair_waiting_for_2nd_conf].remove(pair)
+
         if len(clave_waiting) > 1 and len(karen_waiting) > 1:
             # conference time baby!
             clav_p = state[_clav_waiting_for_conf].pop(0)

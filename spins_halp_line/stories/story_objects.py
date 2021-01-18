@@ -533,9 +533,12 @@ class ScriptState(Logger):
                 if 'key' in change:
                     self._state[to][change['key']] = value
                 else:
+                    if value in self._state[to]:
+                        self._state[to].remove(value)
+
                     if change['to_front']:
                         for v in value:
-                            self.state[to].insert(0, v)
+                            self._state[to].insert(0, v)
                     else:
                         self._state[to].extend(value)
 
@@ -552,7 +555,7 @@ class ScriptState(Logger):
     # This function is what should be overridden in child classes.
     # Then the child class should be passed into the script when you construct it.
     @staticmethod
-    async def do_reduce(state: dict, shard:StateShard):
+    async def do_reduce( state: dict, shard:StateShard):
         return state
 
     # This is used to check if our version is out of date
