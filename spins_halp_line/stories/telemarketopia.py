@@ -388,7 +388,7 @@ class ConferenceTask(Task):
 
     async def check_player_status(self):
         await self.refresh_players()
-
+        self.d(f'check_player_status({self.clavae_num}, {self.karen_num})')
         # cheeck to make sure we've seen them within last 5
         clavae_ready = self.clavae_script.get(_got_text, None)
         if clavae_ready:
@@ -399,6 +399,7 @@ class ConferenceTask(Task):
             karen_ready = datetime.fromisoformat(karen_ready)
             karen_ready = timedelta(seconds=60 * 5) < (datetime.now() - karen_ready)
 
+        self.d(f'check_player_status({self.clavae_num}, {self.karen_num}) -> {clavae_ready}, {karen_ready}')
         return clavae_ready, karen_ready
 
     async def start_child_task(self, task):
@@ -472,10 +473,10 @@ class ConfWaitForPlayers(ConferenceTask):
         return new_conf_t
 
     async def maybe_send_text(self, ready: bool, number: PhoneNumber):
-        text_count = self.state.text_counts[number]
+        text_count = self.state.text_counts[number.e164]
         if not ready and self.state.time_elapsed > 60 * 5 and text_count == 1:
             await send_text(ConfReady, number)
-            self.state.text_counts[number] += 1
+            self.state.text_counts[number.e164] += 1
 
     async def execute(self):
         self.d(f"ConfWaitForPlayers({self.clavae_num}, {self.karen_num})")
