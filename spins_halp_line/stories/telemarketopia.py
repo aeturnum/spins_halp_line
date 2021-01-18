@@ -1166,10 +1166,17 @@ Third_Call_Done = "State_Waiting_For_Conference"
 
 class PleaseWaitRoom(TeleRoom):
     Name = "Please Wait Room"
+    
+    async def action(self, context: RoomContext):
+        self.d(f"action() context: {context}")
+        response = VoiceResponse()
+        response.say("Thank you for expressing your interest in more Telemarketopia! You will get more Telemarketopia shortly.")
+
+        return response
 
 class PleaseWaitScene(PathScene):
     Name = "PleaseWaitScene"
-    Start = [PleaseWaitRoom]
+    Start = [PleaseWaitRoom()]
     Choices = {}
 
 PleaseWaitSceneAndState = SceneAndState(PleaseWaitScene(), Script_Ignore_Change)
