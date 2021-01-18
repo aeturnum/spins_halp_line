@@ -365,7 +365,7 @@ class TeleState(ScriptState):
         # todo: players who have been out for a while might not want to play
 
         print('do_reduce')
-        print(f'{state}')
+        print(f'do_reduce:{state}')
         # move remove people who have been moved back
         clave_waiting = state.get(_clav_waiting_for_conf)
         karen_waiting = state.get(_kar_waiting_for_conf)
@@ -378,7 +378,10 @@ class TeleState(ScriptState):
         for pair in to_remove:
             state[_pair_waiting_for_2nd_conf].remove(pair)
 
-        print(f'{state}')
+        print("duplicates_removed!")
+        print(f'do_reduce:{state}')
+        print(f':{clave_waiting}')
+        print(f':{karen_waiting}')
         if len(clave_waiting) > 1 and len(karen_waiting) > 1:
             # conference time baby!
             clav_p = state[_clav_waiting_for_conf].pop(0)
