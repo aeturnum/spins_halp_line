@@ -681,13 +681,13 @@ class SendFinalFinalResult(Task):
 class ConferenceChecker(TextHandler):
 
     async def first_conf_text(self, text_request: TwilRequest, shard: StateShard, script_info: ScriptInfo):
-        self.d(f'new_text - player is agreeing to conf?')
+        self.d(f'new_text({text_request.caller}) - player is agreeing to conf?')
         # only set if they are not yet in their first conference
         script_info.data[_ready_for_conf] = datetime.now().isoformat()
         return script_info
 
     async def first_conf_choice(self, text_request: TwilRequest, shard: StateShard, script_info: ScriptInfo):
-        self.d(f'new_text(context, {text_request.text_body})')
+        self.d(f'new_text({text_request.caller}, {text_request.text_body})')
         script_info.data[_player_final_choice] = text_request.text_body.strip()
         partner = TelePlayer(script_info.data[_partner])
         await partner.load()
@@ -714,7 +714,7 @@ class ConferenceChecker(TextHandler):
         return script_info
 
     async def final_answer_text(self, text_request: TwilRequest, shard: StateShard, script_info: ScriptInfo):
-        self.d(f'final answer? {text_request.text_body})')
+        self.d(f'text[{text_request.caller}] final answer? {text_request.text_body})')
         partner = PhoneNumber(script_info.data[_partner])
         await add_task.send(SendFinalFinalResult(
             text_request.caller,
@@ -725,7 +725,7 @@ class ConferenceChecker(TextHandler):
         return script_info
 
     async def new_text(self, text_request: TwilRequest, shard: StateShard, script_info: ScriptInfo):
-        self.d(f'new_text(context, {text_request.text_body})')
+        self.d(f'new_text({text_request.caller}, {text_request.text_body})')
         if text_request.num_called == Global_Number_Library.from_label('conference'):
             if not script_info.data.get(_player_in_first_conference, False):
                 return await self.first_conf_text(text_request, shard, script_info)

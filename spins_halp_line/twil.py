@@ -115,7 +115,7 @@ class TwilRequest(object):
 
     @property
     def text_body(self) -> str:
-        return self._data.get('body')
+        return self._data.get('Body')
 
     @property
     def is_call(self):
