@@ -371,13 +371,13 @@ class TeleState(ScriptState):
         clave_waiting = state.get(_clav_waiting_for_conf)
         karen_waiting = state.get(_kar_waiting_for_conf)
         to_remove = []
-        for pair in [_waiting_for_conf]:
+        for pair in state[_waiting_for_conf]:
             if pair[0] in clave_waiting and pair[1] in karen_waiting:
                 to_remove.append(pair)
 
         # actually remove the things we just found
         for pair in to_remove:
-            state[_pair_waiting_for_2nd_conf].remove(pair)
+            state[_waiting_for_conf].remove(pair)
 
         remove_from_clav = []
         remove_from_kar = []
@@ -385,7 +385,7 @@ class TeleState(ScriptState):
         karen = state.get(_karen_players)
         for player in clave:
             if player in karen:
-                if len(karen) > len(karen):
+                if (len(clave) + len(remove_from_clav)) > (len(karen) + len(remove_from_kar)):
                     print(f"Player {player} is in both queues, removing from Karen because that one is longer")
                     remove_from_kar.append(player)
                 else:
