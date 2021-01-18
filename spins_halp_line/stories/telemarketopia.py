@@ -1,4 +1,5 @@
-from typing import Dict, Union, List, Optional
+from dataclasses import dataclass, field
+from typing import Dict, Union, List, Optional, Any
 from datetime import datetime, timedelta
 
 from twilio.twiml.voice_response import VoiceResponse, Play, Gather, Hangup
@@ -31,7 +32,11 @@ from spins_halp_line.media.common import (
     Puppet_Master,
     Clavae_Conference_Intro,
     Karen_Conference_Info,
-    Conference_Nudge
+    Conference_Nudge,
+    Karen_Final_Puzzle_Image_1,
+    Karen_Final_Puzzle_Image_2,
+    Clavae_Final_Puzzle_Image_1,
+    Clavae_Final_Puzzle_Image_2
 )
 from spins_halp_line.twil import TwilRequest
 from spins_halp_line.player import Player
@@ -223,7 +228,7 @@ class Karen1(TextTask):
 
 
 class Karen2(TextTask):
-    Text = "Please call +1-510-256-7751 to continue learning about the exciting opportunities you'll have at Telemarketopia!"
+    Text = "Please call +1-510-256-7675 to continue learning about the exciting opportunities you'll have at Telemarketopia!"
     From_Number_Label = 'karen_2'
     Image = Telemarketopia_Logo
 
@@ -239,6 +244,15 @@ class ConfReady(TextTask):
     From_Number_Label = 'conference'
     Image = Telemarketopia_Logo
 
+class ConfUnReadyIfReply(TextTask):
+    Text = "Oh no, I'm sorry. It looks like the person we paired you up with was less enthusiastic than we expected. Give us some time to find someone else..."
+    From_Number_Label = 'conference'
+    Image = Telemarketopia_Logo
+
+class ConfUnReadyIfNoReply(TextTask):
+    Text = "Oh no! The lagrange solution has become inverted! We're going to have to wait a little longer."
+    From_Number_Label = 'conference'
+    Image = Telemarketopia_Logo
 
 class KPostConfOptions(TextTask):
     Text = """
@@ -257,6 +271,35 @@ Text 2 if: I believe I have convinced the other team to open a Doortal. Hooray! 
 Text 3 if: Attempt to Destroy Telemarketopia!!"""
     From_Number_Label = 'conference'
     Image = Telemarketopia_Logo
+
+
+class CFinalPuzzle1(TextTask):
+    Text = """
+To break into the central AI Database and hit the manual self-destruct button, you’ll need to enter the correct passcode. Your only clues are these cryptic notes, left inside one of the database passages.
+    """
+    From_Number_Label = 'final'
+    Image = Clavae_Final_Puzzle_Image_1
+
+class CFinalPuzzle2(TextTask):
+    Text = """
+You’ll need to work together in another voice conference to finish. One of your team needs to text the correct passcode to +1-510-256-7740.
+    """
+    From_Number_Label = 'final'
+    Image = Clavae_Final_Puzzle_Image_2
+
+class KFinalPuzzle1(TextTask):
+    Text = """
+To break into the central AI Database and hit the manual self-destruct button, you’ll need to enter the correct passcode. Your only clues are these cryptic notes, left inside one of the database passages.
+    """
+    From_Number_Label = 'final'
+    Image = Karen_Final_Puzzle_Image_1
+
+class KFinalPuzzle2(TextTask):
+    Text = """
+You’ll need to work together in another voice conference to finish. One of your team needs to text the correct passcode to +1-510-256-7740.
+    """
+    From_Number_Label = 'final'
+    Image = Karen_Final_Puzzle_Image_2
 
 async def send_text(TextClass, player_numer: PhoneNumber, delay=0):
     await add_task.send(TextClass(player_numer, delay))
@@ -347,41 +390,33 @@ class TelePlayer(Player):
         return self.telemarketopia.get(_path)
 
 class ConferenceTask(Task):
-    def __init__(self, clavae_player: str, karen_player: str, shard: StateShard):
-        super(ConferenceTask, self).__init__(0)
-        self.clavae: PhoneNumber = PhoneNumber(clavae_player)
-        self.karen: PhoneNumber = PhoneNumber(karen_player)
+    def __init__(self, clavae_player: str, karen_player: str, shard: StateShard, delay: int=0):
+        super(ConferenceTask, self).__init__(delay)
+        self.clavae_num: PhoneNumber = PhoneNumber(clavae_player)
+        self.karen_num: PhoneNumber = PhoneNumber(karen_player)
         self.shard = shard
         self.conference: TwilConference = None
 
         self.clavae_script: Optional[dict] = None
         self.karen_script: Optional[dict] = None
 
+    @classmethod
+    def from_conf_task(cls, conf: 'ConferenceTask', delay=None):
+        if delay is None:
+            delay = conf.delay
+        new_conf_t = cls(conf.clavae_num.e164, conf.karen_num.e164, conf.shard, delay)
+        new_conf_t.conference = conf.conference
+
+        return new_conf_t
+
     async def refresh_players(self):
-        clave_player = TelePlayer(self.clavae)
-        karen_player = TelePlayer(self.karen)
+        clave_player = TelePlayer(self.clavae_num)
+        karen_player = TelePlayer(self.karen_num)
         await clave_player.load()
         await karen_player.load()
 
         self.karen_script = karen_player.telemarketopia
         self.clavae_script = clave_player.telemarketopia
-
-    async def load_conference(self):
-        from_number = Global_Number_Library.from_label('conference')
-        if not self.conference:
-            self.conference = await new_conference(from_number)
-
-        for conf in conferences():
-            if conf == self.conference:
-                # this *should* not matter but I am past dealing with instance fuckary
-                return conf
-
-    async def execute(self):
-
-        await send_text(ConfReady, self.clavae)
-        await send_text(ConfReady, self.karen)
-
-        await self.wait_for_players()
 
     async def check_player_status(self):
         await self.refresh_players()
@@ -398,130 +433,281 @@ class ConferenceTask(Task):
 
         return clavae_ready, karen_ready
 
-    async def wait_for_players(self):
-        # wait 1 min
-        await trio.sleep(60)
-        await self.refresh_players()
+    async def start_child_task(self, task):
+        await add_task(task)
 
-        # todo: add task to text players and see if they are ready
+    async def load_conference(self):
+        from_number = Global_Number_Library.from_label('conference')
+        if not self.conference:
+            self.conference = await new_conference(from_number)
+
+        for conf in conferences():
+            if conf == self.conference:
+                # this *should* not matter but I am past dealing with instance fuckary
+                return conf
+
+class ReturnPlayers(ConferenceTask):
+
+    async def unready_text(self, ready: bool, number: PhoneNumber):
+        cls = ConfUnReadyIfReply
+        if not ready:
+            cls = ConfUnReadyIfNoReply
+        await send_text(cls, number)
+
+    async def execute(self):
         c_r, k_r = await self.check_player_status()
+        # Put back into queue, but put them at the back of the queue if they didn't reply
+        self.shard.append(_clav_waiting_for_conf, self.clavae_num.e164, to_front=c_r)
+        self.shard.append(_kar_waiting_for_conf, self.karen_num.e164, to_front=c_r)
 
-        count = 60
-        kr_again = False
-        cr_again = False
-        while not c_r and not k_r:
-            for x in range(0, 3):
-                await trio.sleep(10)
-            c_r, k_r = await self.check_player_status()
-            count += 1
+        # Text player to let them know the conference is off
+        await self.unready_text(c_r, self.clavae_num)
+        await self.unready_text(k_r, self.karen_num)
 
-            if count > 60 * 5:
-                # text again if no response and
-                if not c_r and not cr_again:
-                    cr_again = True
-                    await send_text(ConfReady, self.clavae)
-
-                if not k_r and not kr_again:
-                    kr_again = True
-                    await send_text(ConfReady, self.clavae)
-
-            if count > 60 * 10:
-                return await self.return_players()
-
-        return await self.call_players()
-
-    async def return_players(self):
-        c_r, k_r = await self.check_player_status()
-        self.shard.append(_clav_waiting_for_conf, self.clavae.e164, to_front=not c_r)
-        self.shard.append(_kar_waiting_for_conf, self.karen.e164, to_front=not c_r)
-
+        # Send changes and re-run pairing
         await self.shard.integrate()
         await self.shard.trigger_reduction()
 
-    async def call_players(self):
-        await self.conference.add_participant(
-            self.clavae,
-            play_first=Clavae_Conference_Intro
-        )
-
-        await self.conference.add_participant(
-            self.karen,
-            play_first=Karen_Conference_Info
-        )
-
+class ConnectFirstConference(ConferenceTask):
+    async def execute(self):
         await trio.sleep(30)
 
         await self.load_conference()
         if not self.conference.started:
-            return await self.return_players()
+            return await add_task(ReturnPlayers.from_conf_task(self))
 
         await trio.sleep(60 * 5)
         await self.conference.play_sound(Conference_Nudge)
 
+class ConfWaitForPlayers(ConferenceTask):
 
-class ClimaxTask(Task):
+    @dataclass
+    class ConfWaitForPlayersState:
+        time_elapsed: int = 0
+        text_counts: Dict[str, int] = field(default_factory=dict)  # the only field exposed to Rooms
 
-    def __init__(self, clavae_player: PhoneNumber, clav_choice:str, karen_player:PhoneNumber, karen_choice:str):
-        super(ClimaxTask, self).__init__()
-        self.clavae_player = clavae_player
+    def __init__(self, clavae_player: str, karen_player: str, shard: StateShard, delay:int=0, ongoing_state: dict=None):
+        super(ConfWaitForPlayers, self).__init__(clavae_player, karen_player, shard, delay)
+        if ongoing_state is None:
+            ongoing_state = self.ConfWaitForPlayersState(0, {karen_player: 1, clavae_player: 1})
+        self.state: ConfWaitForPlayers.ConfWaitForPlayersState = ongoing_state
+        self.state.time_elapsed += delay
+
+    @classmethod
+    def from_conf_task(cls, conf: 'ConferenceTask', delay=0, last_state = None):
+        new_conf_t = cls(conf.clavae_num.e164, conf.karen_num.e164, conf.shard, delay, last_state)
+        new_conf_t.conference = conf.conference
+
+        return new_conf_t
+
+    async def maybe_send_text(self, ready: bool, number: PhoneNumber):
+        text_count = self.state.text_counts[number]
+        if not ready and self.state.time_elapsed > 60 * 5 and text_count == 1:
+            await send_text(ConfReady, number)
+            self.state.text_counts[number] += 1
+
+    async def execute(self):
+        c_r, k_r = await self.check_player_status()
+        await self.maybe_send_text(c_r, self.clavae_num)
+        await self.maybe_send_text(k_r, self.karen_num)
+
+        task_to_start = None
+        if not c_r and not k_r:
+            if self.state.time_elapsed < 60 * 10:
+                # wait another 15 seconds and check again
+                task_to_start = ConfWaitForPlayers.from_conf_task(self, 15, self.state)
+            else:
+                # put people back in the queue
+                task_to_start = ReturnPlayers.from_conf_task(self)
+        else:
+            await self.conference.add_participant(
+                self.clavae_num,
+                play_first=Clavae_Conference_Intro
+            )
+
+            await self.conference.add_participant(
+                self.karen_num,
+                play_first=Karen_Conference_Info
+            )
+
+            task_to_start = ConnectFirstConference.from_conf_task(self, )
+
+        return await self.start_child_task(task_to_start)
+
+class ConfStartFirst(ConferenceTask):
+    async def execute(self):
+
+        await send_text(ConfReady, self.clavae_num)
+        await send_text(ConfReady, self.karen_num)
+
+        wait_task = ConfWaitForPlayers.from_conf_task(self, 60)
+        await self.start_child_task(wait_task)
+
+        # await self.wait_for_players()
+
+    # async def wait_for_players(self):
+    #     # wait 1 min
+    #     await trio.sleep(60)
+    #     await self.refresh_players()
+    #
+    #     # todo: add task to text players and see if they are ready
+    #     c_r, k_r = await self.check_player_status()
+    #
+    #     count = 60
+    #     kr_again = False
+    #     cr_again = False
+    #     while not c_r and not k_r:
+    #         for x in range(0, 3):
+    #             await trio.sleep(10)
+    #         c_r, k_r = await self.check_player_status()
+    #         count += 1
+    #
+    #         if count > 60 * 5:
+    #             # text again if no response and
+    #             if not c_r and not cr_again:
+    #                 cr_again = True
+    #                 await send_text(ConfReady, self.clavae_num)
+    #
+    #             if not k_r and not kr_again:
+    #                 kr_again = True
+    #                 await send_text(ConfReady, self.clavae_num)
+    #
+    #         if count > 60 * 10:
+    #             return await self.return_players()
+    #
+    #     return await self.call_players()
+    #
+    # async def return_players(self):
+    #     c_r, k_r = await self.check_player_status()
+    #     self.shard.append(_clav_waiting_for_conf, self.clavae_num.e164, to_front=not c_r)
+    #     self.shard.append(_kar_waiting_for_conf, self.karen_num.e164, to_front=not c_r)
+    #
+    #     await self.shard.integrate()
+    #     await self.shard.trigger_reduction()
+    #
+    # async def call_players(self):
+    #     await self.conference.add_participant(
+    #         self.clavae_num,
+    #         play_first=Clavae_Conference_Intro
+    #     )
+    #
+    #     await self.conference.add_participant(
+    #         self.karen_num,
+    #         play_first=Karen_Conference_Info
+    #     )
+    #
+    #     await trio.sleep(30)
+    #
+    #     await self.load_conference()
+    #     if not self.conference.started:
+    #         return await self.return_players()
+    #
+    #     await trio.sleep(60 * 5)
+    #     await self.conference.play_sound(Conference_Nudge)
+
+class DestroyTelemarketopia(Task):
+    def __init__(self, clavae_num: PhoneNumber, karen_num: PhoneNumber):
+        super(DestroyTelemarketopia, self).__init__()
+        self.clavae_num = clavae_num
+        self.karen_num = karen_num
+
+    async def execute(self):
+        await send_text(CFinalPuzzle1, self.clavae_num)
+        await send_text(KFinalPuzzle1, self.karen_num)
+
+        await send_text(CFinalPuzzle2, self.clavae_num)
+        await send_text(KFinalPuzzle2, self.karen_num)
+
+        conference = await new_conference(Global_Number_Library.from_label('final'))
+
+        await conference.add_participant(self.clavae_num)
+
+        await conference.add_participant(self.karen_num)
+
+class MakeClimaxCallsTask(Task):
+
+    def __init__(self, clavae_num: PhoneNumber, clav_choice:str, karen_num:PhoneNumber, karen_choice:str):
+        super(MakeClimaxCallsTask, self).__init__()
+        self.clavae_num = clavae_num
         self.clav_choice = clav_choice
-        self.karen_player = karen_player
+        self.karen_num = karen_num
         self.karen_choice = karen_choice
 
     @property
     def status_callback(self):
         return '/'.join([Root_Url, 'climage', self.clav_choice, self.karen_choice])
 
+    @property
+    def start_second_conference(self):
+        return self.clav_choice == self.karen_choice == '3'
+
     async def execute(self):
         twilio_client: rest.Client = rest.Client(Credentials["twilio"]["sid"], Credentials["twilio"]["token"])
         from_number = Global_Number_Library.from_label("final")
         twilio_client.calls.create(
             url=self.status_callback,
-            to=self.clavae_player.e164,
+            to=self.clavae_num.e164,
             from_=from_number.e164
         )
 
         twilio_client.calls.create(
             url=self.status_callback,
-            to=self.karen_player.e164,
+            to=self.karen_num.e164,
             from_=from_number.e164
         )
 
+        if self.start_second_conference:
+            await add_task(DestroyTelemarketopia(self.clavae_num, self.karen_num))
+
 
 class ConferenceChecker(TextHandler):
+
+    async def first_conf_text(self, context: RoomContext, text_request: TwilRequest):
+        self.d(f'new_text - player is agreeing to conf?')
+        # only set if they are not yet in their first conference
+        context.script[_ready_for_conf] = datetime.now().isoformat()
+
+    async def first_conf_choice(self, context: RoomContext, text_request: TwilRequest):
+        self.d(f'new_text(context, {text_request.text_body})')
+        context.script[_player_final_choice] = text_request.text_body.strip()
+        partner = TelePlayer(context.script[_partner])
+        await partner.load()
+
+        # check if we have a choice
+        if partner.telemarketopia.get(_player_final_choice, False):
+            if context.script[_path] == Path_Clavae:
+                await add_task(
+                    MakeClimaxCallsTask(text_request.caller,
+                                        context.script[_player_final_choice],
+                                        partner.number,
+                                        partner.telemarketopia[_player_final_choice]
+                                        )
+                )
+            else:
+                await add_task(
+                    MakeClimaxCallsTask(partner.number,
+                                        partner.telemarketopia[_player_final_choice],
+                                        text_request.caller,
+                                        context.script[_player_final_choice]
+                                        )
+                )
+
+    async def final_answer_text(self, context: RoomContext, text_request: TwilRequest):
+        pass
 
     async def new_text(self, context: RoomContext, text_request: TwilRequest):
         self.d(f'new_text(context, {text_request.text_body})')
         if text_request.num_called == Global_Number_Library.from_label('conference'):
             if not context.script.get(_player_in_first_conference, False):
-                self.d(f'new_text - player is agreeing to conf?')
-                # only set if they are not yet in their first conference
-                context.script[_ready_for_conf] = datetime.now().isoformat()
+                await self.first_conf_text(context, text_request)
 
             if context.script.get(_has_decision_text):
-                self.d(f'new_text(context, {text_request.text_body})')
-                context.script[_player_final_choice] = text_request.text_body.strip()
-                partner = TelePlayer(context.script[_partner])
-                await partner.load()
+                await self.first_conf_choice(context, text_request)
 
-                # check if we have a choice
-                if partner.telemarketopia.get(_player_final_choice, False):
-                    if context.script[_path] == Path_Clavae:
-                        await add_task(
-                            ClimaxTask(text_request.caller,
-                                       context.script[_player_final_choice],
-                                       partner.number,
-                                       partner.telemarketopia[_player_final_choice]
-                                      )
-                        )
-                else:
-                    await add_task(
-                        ClimaxTask(partner.number,
-                                   partner.telemarketopia[_player_final_choice],
-                                   text_request.caller,
-                                   context.script[_player_final_choice]
-                                   )
-                    )
+        elif text_request.num_called == Global_Number_Library.from_label('final'):
+            await self.final_answer_text(context, text_request)
+        else:
+            self.w(f'Do not know what to do with: [From:{text_request.caller}] -> {text_request.num_called}: {text_request.text_body})')
 
 
 # subclass to handle our specific needs around conferences
