@@ -402,7 +402,7 @@ class ConferenceTask(Task):
         return clavae_ready, karen_ready
 
     async def start_child_task(self, task):
-        await add_task(task)
+        await add_task.send(task)
 
     async def load_conference(self):
         from_number = Global_Number_Library.from_label('conference')
@@ -445,7 +445,7 @@ class ConnectFirstConference(ConferenceTask):
         await self.load_conference()
         if not self.conference.started:
             self.d(f"ConnectFirstConference({self.clavae_num}, {self.karen_num}): Someone didn't pick up, returning")
-            return await add_task(ReturnPlayers.from_conf_task(self))
+            return await add_task.send(ReturnPlayers.from_conf_task(self))
 
         await trio.sleep(60 * 5)
         await self.conference.play_sound(Conference_Nudge)
@@ -647,7 +647,7 @@ class MakeClimaxCallsTask(Task):
         )
 
         if self.start_second_conference:
-            await add_task(DestroyTelemarketopia(self.clavae_num, self.karen_num))
+            await add_task.send(DestroyTelemarketopia(self.clavae_num, self.karen_num))
 
 
 class SendFinalFinalResult(Task):
@@ -694,7 +694,7 @@ class ConferenceChecker(TextHandler):
         # check if we have a choice
         if partner.telemarketopia.get(_player_final_choice, False):
             if context.script[_path] == Path_Clavae:
-                await add_task(
+                await add_task.send(
                     MakeClimaxCallsTask(text_request.caller,
                                         context.script[_player_final_choice],
                                         partner.number,
@@ -702,7 +702,7 @@ class ConferenceChecker(TextHandler):
                                         )
                 )
             else:
-                await add_task(
+                await add_task.send(
                     MakeClimaxCallsTask(partner.number,
                                         partner.telemarketopia[_player_final_choice],
                                         text_request.caller,
@@ -713,7 +713,7 @@ class ConferenceChecker(TextHandler):
     async def final_answer_text(self, context: RoomContext, text_request: TwilRequest):
         self.d(f'final answer? {text_request.text_body})')
         partner = PhoneNumber(context.script[_partner])
-        await add_task(SendFinalFinalResult(
+        await add_task.send(SendFinalFinalResult(
             text_request.caller,
             partner,
             text_request.text_body.strip() == '462'
