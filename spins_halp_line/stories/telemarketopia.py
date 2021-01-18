@@ -368,6 +368,7 @@ class TeleState(ScriptState):
         print('do_reduce')
         print(f'do_reduce:{state}')
         # move remove people who have been moved back
+
         clave_waiting = state.get(_clav_waiting_for_conf)
         karen_waiting = state.get(_kar_waiting_for_conf)
         to_remove = []
@@ -379,29 +380,31 @@ class TeleState(ScriptState):
         for pair in to_remove:
             state[_waiting_for_conf].remove(pair)
 
-        remove_from_clav = []
-        remove_from_kar = []
-        clave = state.get(_clavae_players)
-        karen = state.get(_karen_players)
-        for player in clave:
-            if player in karen:
-                if (len(clave) + len(remove_from_clav)) > (len(karen) + len(remove_from_kar)):
-                    print(f"Player {player} is in both queues, removing from Karen because that one is longer")
-                    remove_from_kar.append(player)
-                else:
-                    print(f"Player {player} is in both queues, removing from Clavae because that one is longer")
-                    remove_from_clav.append(player)
+        # remove_from_clav = []
+        # remove_from_kar = []
+        # clave = state.get(_clavae_players)
+        # karen = state.get(_karen_players)
+        # for clav_player in clave:
+        #     if clav_player in karen:
+        #         if (len(clave) + len(remove_from_clav)) > (len(karen) + len(remove_from_kar)):
+        #             print(f"Player {clav_player} is in both queues, removing from Karen because that one is longer")
+        #             remove_from_kar.append(clav_player)
+        #         else:
+        #             print(f"Player {clav_player} is in both queues, removing from Clavae because that one is longer")
+        #             remove_from_clav.append(clav_player)
 
-        for player in remove_from_clav:
-            state.get(_clavae_players).remove(player)
-
-        for player in remove_from_kar:
-            state.get(_karen_players).remove(player)
+        # for player in remove_from_clav:
+        #     state.get(_clavae_players).remove(player)
+        #
+        # for player in remove_from_kar:
+        #     state.get(_karen_players).remove(player)
 
         print("duplicates_removed!")
         print(f'do_reduce:{state}')
         print(f'clav_waiting:{clave_waiting}({len(clave_waiting)})')
         print(f'karen_waiting:{karen_waiting}({len(karen_waiting)})')
+        clave_waiting = state.get(_clav_waiting_for_conf)
+        karen_waiting = state.get(_kar_waiting_for_conf)
         if len(clave_waiting) >= 1 and len(karen_waiting) >= 1:
             # conference time baby!
             clav_p = state[_clav_waiting_for_conf].pop(0)
