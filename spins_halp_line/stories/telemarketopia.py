@@ -413,8 +413,8 @@ class TeleState(ScriptState):
             state[_waiting_for_conf].append([clav_p, karen_p])
             await add_task.send(
                 ConferenceTask(
-                    state[_clav_waiting_for_conf].pop(0),
-                    state[_kar_waiting_for_conf].pop(0),
+                    clav_p,
+                    karen_p,
                     shard
                 )
             )
