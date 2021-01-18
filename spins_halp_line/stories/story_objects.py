@@ -572,6 +572,7 @@ class ScriptState(Logger):
         # sync with DB
         async with LockManager(self._lock):
             await self.sync_redis(True)
+            self.d('Starting do_reduce_cycle')
             self._state = await self.do_reduce(self._state, self.shard)
 
             await self.save_to_redis(True)

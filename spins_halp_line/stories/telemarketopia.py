@@ -364,7 +364,8 @@ class TeleState(ScriptState):
         # todo: think about doing something about how recently players have been active?
         # todo: players who have been out for a while might not want to play
 
-
+        print('do_reduce')
+        print(f'{state}')
         # move remove people who have been moved back
         clave_waiting = state.get(_clav_waiting_for_conf)
         karen_waiting = state.get(_kar_waiting_for_conf)
@@ -377,10 +378,12 @@ class TeleState(ScriptState):
         for pair in to_remove:
             state[_pair_waiting_for_2nd_conf].remove(pair)
 
+        print(f'{state}')
         if len(clave_waiting) > 1 and len(karen_waiting) > 1:
             # conference time baby!
             clav_p = state[_clav_waiting_for_conf].pop(0)
             karen_p = state[_kar_waiting_for_conf].pop(0)
+            print(f'Starting conf with {[clav_p, karen_p]}')
             state[_waiting_for_conf].append([clav_p, karen_p])
             await add_task.send(
                 ConferenceTask(
@@ -415,7 +418,7 @@ class ConferenceTask(Task):
         self.clavae_num: PhoneNumber = PhoneNumber(clavae_player)
         self.karen_num: PhoneNumber = PhoneNumber(karen_player)
         self.shard = shard
-        self.conference: TwilConference = None
+        self.conference: Optional[TwilConference] = None
 
         self.clavae_script: Optional[dict] = None
         self.karen_script: Optional[dict] = None
@@ -464,6 +467,7 @@ class ConferenceTask(Task):
         for conf in conferences():
             if conf == self.conference:
                 # this *should* not matter but I am past dealing with instance fuckary
+                self.conference = conf
                 return conf
 
 class ReturnPlayers(ConferenceTask):
@@ -490,10 +494,12 @@ class ReturnPlayers(ConferenceTask):
 
 class ConnectFirstConference(ConferenceTask):
     async def execute(self):
+        self.d(f"ConnectFirstConference({self.clavae_num}, {self.karen_num}): Checking if players connected...")
         await trio.sleep(30)
 
         await self.load_conference()
         if not self.conference.started:
+            self.d(f"ConnectFirstConference({self.clavae_num}, {self.karen_num}): Someone didn't pick up, returning")
             return await add_task(ReturnPlayers.from_conf_task(self))
 
         await trio.sleep(60 * 5)
@@ -527,19 +533,23 @@ class ConfWaitForPlayers(ConferenceTask):
             self.state.text_counts[number] += 1
 
     async def execute(self):
+        self.d(f"ConfWaitForPlayers({self.clavae_num}, {self.karen_num})")
         c_r, k_r = await self.check_player_status()
         await self.maybe_send_text(c_r, self.clavae_num)
         await self.maybe_send_text(k_r, self.karen_num)
 
         task_to_start = None
         if not c_r and not k_r:
+            self.d(f"ConfWaitForPlayers({self.clavae_num}, {self.karen_num}): {c_r}, {k_r}: someone isn't ready!")
             if self.state.time_elapsed < 60 * 10:
                 # wait another 15 seconds and check again
                 task_to_start = ConfWaitForPlayers.from_conf_task(self, 15, self.state)
             else:
+                self.d(f"ConfWaitForPlayers({self.clavae_num}, {self.karen_num}): Aborting both!")
                 # put people back in the queue
                 task_to_start = ReturnPlayers.from_conf_task(self)
         else:
+            self.d(f"ConfWaitForPlayers({self.clavae_num}, {self.karen_num}): Starting conference")
             await self.conference.add_participant(
                 self.clavae_num,
                 play_first=Clavae_Conference_Intro
@@ -556,6 +566,7 @@ class ConfWaitForPlayers(ConferenceTask):
 
 class ConfStartFirst(ConferenceTask):
     async def execute(self):
+        self.d(f"ConfStartFirst({self.clavae_num}, {self.karen_num})")
 
         await send_text(ConfReady, self.clavae_num)
         await send_text(ConfReady, self.karen_num)
@@ -632,6 +643,7 @@ class DestroyTelemarketopia(Task):
         self.karen_num = karen_num
 
     async def execute(self):
+        self.d(f"DestroyTelemarketopia({self.clavae_num}, {self.karen_num}): Let's go!")
         await send_text(CFinalPuzzle1, self.clavae_num)
         await send_text(KFinalPuzzle1, self.karen_num)
 
@@ -674,6 +686,7 @@ class MakeClimaxCallsTask(Task):
         return self.clav_choice == self.karen_choice == '3'
 
     async def execute(self):
+        self.d(f"MakeClimaxCallsTask({self.clavae_num}({self.clav_choice}), {self.karen_num}({self.karen_choice}))!!")
         twilio_client: rest.Client = rest.Client(Credentials["twilio"]["sid"], Credentials["twilio"]["token"])
         from_number = Global_Number_Library.from_label("final")
         twilio_client.calls.create(
@@ -700,6 +713,7 @@ class SendFinalFinalResult(Task):
         self.karen_num = karen_num
 
     async def execute(self):
+        self.d(f"SendFinalFinalResult({self.clavae_num}, {self.karen_num}): !!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!")
         twilio_client: rest.Client = rest.Client(Credentials["twilio"]["sid"], Credentials["twilio"]["token"])
         from_number = Global_Number_Library.from_label("final")
 
@@ -1023,7 +1037,7 @@ class DatabaseAIThirdCall(TeleRoom):
 
     async def get_audio_for_room(self, context: RoomContext):
         context.shard.append(_clav_waiting_for_conf, context.player.number.e164)
-        await send_text(ConfWait, context.player.number.e164)
+        await send_text(ConfWait, context.player.number)
         return await self.get_resource_for_path(context)
 
 
@@ -1107,7 +1121,7 @@ class TelemarketopiQueueForConf(TeleRoom):
 
     async def get_audio_for_room(self, context: RoomContext):
         context.shard.append(_kar_waiting_for_conf, context.player.number.e164)
-        await send_text(ConfWait, context.player.number.e164)
+        await send_text(ConfWait, context.player.number)
         return await self.get_resource_for_path(context)
 
 
@@ -1138,7 +1152,7 @@ class TelemarketopiaPromotionScene(PathScene):
 
 Path_Assigned = "State_Path_Assigned"
 Second_Call_Done = "State_Second_Call_Done"
-Third_Call_Done = "State_Third_Call_Done"
+Third_Call_Done = "State_Waiting_For_Conference"
 
 # todo: Put a function into Script that will handle texts that we get from twilio
 # todo: Then we need a method of updating player state and also updating shared script state
