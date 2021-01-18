@@ -720,7 +720,7 @@ class Script(Logger):
 
         for handler in self.text_handlers:
             shard: StateShard = self.state.shard
-            text_state: dict = script_info.text_handler_states.get(handler.Name)
+            # text_state: dict = script_info.text_handler_states.get(handler.Name)
 
             # context = RoomContext(request.player, shard, script_info
 
@@ -733,7 +733,7 @@ class Script(Logger):
             #     spoil_state=True  # the room state stops being fresh now
             # )
 
-            script_info.text_handler_states[handler.Name] = text_state
+            # script_info.text_handler_states[handler.Name] = text_state
 
         return
 
