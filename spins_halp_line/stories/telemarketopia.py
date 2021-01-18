@@ -44,6 +44,7 @@ from spins_halp_line.media.resource_space import RSResource
 from spins_halp_line.actions.conferences import TwilConference
 from spins_halp_line.constants import (
     Script_New_State,
+    Script_Ignore_Change,
     Script_Any_Number,
     Script_End_State
 )
@@ -1163,6 +1164,16 @@ Third_Call_Done = "State_Waiting_For_Conference"
 # todo: Maybe we pass in an object that does it
 # todo
 
+class PleaseWaitRoom(TeleRoom):
+    Name = "Please Wait Room"
+
+class PleaseWaitScene(PathScene):
+    Name = "PleaseWaitScene"
+    Start = [PleaseWaitRoom]
+    Choices = {}
+
+PleaseWaitSceneAndState = SceneAndState(PleaseWaitScene(), Script_Ignore_Change)
+
 telemarketopia = Script(
     Telemarketopia_Name,
     {
@@ -1180,6 +1191,12 @@ telemarketopia = Script(
             "+15102567675": SceneAndState(TelemarketopiaPromotionScene(), Third_Call_Done),
             # clavae
             "+15102567705": SceneAndState(Database(), Third_Call_Done)
+        },
+        Third_Call_Done: {
+            '+15102567710': PleaseWaitSceneAndState,
+            '+15102567656': PleaseWaitSceneAndState,
+            '+15102567705': PleaseWaitSceneAndState,
+            '+15102567675': PleaseWaitSceneAndState
         }
     },
     TeleState(),

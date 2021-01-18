@@ -13,7 +13,8 @@ from spins_halp_line.player import Player
 from spins_halp_line.tasks import Task, add_task
 from spins_halp_line.resources.redis import new_redis
 from spins_halp_line.constants import (
-    Script_Any_Number
+    Script_Any_Number,
+    Script_Ignore_Change
 )
 from spins_halp_line.player import SceneInfo, ScriptInfo, RoomInfo
 from spins_halp_line.events import send_event
@@ -769,10 +770,12 @@ class Script(Logger):
             await add_task.send(AfterRequestActions(shard, self.state))
 
             if scene.done(script_info):
-                self.d(
-                    f'play({request}) - scene is done. Script state: {script_info.state} -> {scene_state.next_state}')
-                script_info.scene_history.append(scene.Name)
-                script_info.state = scene_state.next_state
+                if scene_state.next_state == Script_Ignore_Change:
+                    self.d(f'play({request}) - scene is done, but it;s a scene that shouldnt change the player')
+                else:
+                    self.d(f'play({request}) - scene is done. Script state: {script_info.state} -> {scene_state.next_state}')
+                    script_info.scene_history.append(scene.Name)
+                    script_info.state = scene_state.next_state
 
             request.player.set_script(self.name, script_info)  # should not be needed
         except Exception as e:
