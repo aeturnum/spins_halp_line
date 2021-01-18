@@ -244,15 +244,18 @@ class ConfReady(TextTask):
     From_Number_Label = 'conference'
     Image = Telemarketopia_Logo
 
+
 class ConfUnReadyIfReply(TextTask):
     Text = "Oh no, I'm sorry. It looks like the person we paired you up with was less enthusiastic than we expected. Give us some time to find someone else..."
     From_Number_Label = 'conference'
     Image = Telemarketopia_Logo
 
+
 class ConfUnReadyIfNoReply(TextTask):
     Text = "Oh no! The lagrange solution has become inverted! We're going to have to wait a little longer."
     From_Number_Label = 'conference'
     Image = Telemarketopia_Logo
+
 
 class KPostConfOptions(TextTask):
     Text = """
@@ -262,6 +265,7 @@ Text 2 if: The other team has convinced me to open a Doortal to release Madame C
 Text 3 if: Attempt to Destroy Telemarketopia!!"""
     From_Number_Label = 'conference'
     Image = Telemarketopia_Logo
+
 
 class CPostConfOptions(TextTask):
     Text = """
@@ -280,12 +284,14 @@ To break into the central AI Database and hit the manual self-destruct button, y
     From_Number_Label = 'final'
     Image = Clavae_Final_Puzzle_Image_1
 
+
 class CFinalPuzzle2(TextTask):
     Text = """
-You’ll need to work together in another voice conference to finish. One of your team needs to text the correct passcode to +1-510-256-7740.
+You’ll need to work together in another voice conference to finish. One of your team needs to text the correct passcode (AND ONLY THE PASSCODE NUMBER) to +1-510-256-7740.
     """
     From_Number_Label = 'final'
     Image = Clavae_Final_Puzzle_Image_2
+
 
 class KFinalPuzzle1(TextTask):
     Text = """
@@ -294,12 +300,14 @@ To break into the central AI Database and hit the manual self-destruct button, y
     From_Number_Label = 'final'
     Image = Karen_Final_Puzzle_Image_1
 
+
 class KFinalPuzzle2(TextTask):
     Text = """
-You’ll need to work together in another voice conference to finish. One of your team needs to text the correct passcode to +1-510-256-7740.
+You’ll need to work together in another voice conference to finish. One of your team needs to text the correct passcode (AND ONLY THE PASSCODE NUMBER) to +1-510-256-7740.
     """
     From_Number_Label = 'final'
     Image = Karen_Final_Puzzle_Image_2
+
 
 async def send_text(TextClass, player_numer: PhoneNumber, delay=0):
     await add_task.send(TextClass(player_numer, delay))
@@ -323,6 +331,7 @@ _has_decision_text = 'player_has_decision_text'
 _path = 'path'
 _partner = 'ending_partner'
 _player_final_choice = 'final_choice'
+_in_final_final = 'player_in_final_final'
 
 # paths
 Path_Clavae = 'Clavae'
@@ -635,6 +644,18 @@ class DestroyTelemarketopia(Task):
 
         await conference.add_participant(self.karen_num)
 
+        clave_p = TelePlayer(self.clavae_num)
+        karen_p = TelePlayer(self.karen_num)
+
+        await clave_p.load()
+        await karen_p.load()
+
+        clave_p.telemarketopia[_in_final_final] = True
+        karen_p.telemarketopia[_in_final_final] = True
+
+        await clave_p.save()
+        await karen_p.save()
+
 class MakeClimaxCallsTask(Task):
 
     def __init__(self, clavae_num: PhoneNumber, clav_choice:str, karen_num:PhoneNumber, karen_choice:str):
@@ -646,7 +667,7 @@ class MakeClimaxCallsTask(Task):
 
     @property
     def status_callback(self):
-        return '/'.join([Root_Url, 'climage', self.clav_choice, self.karen_choice])
+        return '/'.join([Root_Url, 'climax', self.clav_choice, self.karen_choice])
 
     @property
     def start_second_conference(self):
@@ -670,6 +691,33 @@ class MakeClimaxCallsTask(Task):
         if self.start_second_conference:
             await add_task(DestroyTelemarketopia(self.clavae_num, self.karen_num))
 
+
+class SendFinalFinalResult(Task):
+    def __init__(self, clavae_num: PhoneNumber, karen_num:PhoneNumber, got_right_answer: bool):
+        super(SendFinalFinalResult, self).__init__()
+        self.got_right_answer = got_right_answer
+        self.clavae_num = clavae_num
+        self.karen_num = karen_num
+
+    async def execute(self):
+        twilio_client: rest.Client = rest.Client(Credentials["twilio"]["sid"], Credentials["twilio"]["token"])
+        from_number = Global_Number_Library.from_label("final")
+
+        path = f"{Root_Url}/finalclimax/wrong"
+        if self.got_right_answer:
+            path = f"{Root_Url}/finalclimax/right"
+
+        twilio_client.calls.create(
+            url=path,
+            to=self.clavae_num.e164,
+            from_=from_number.e164
+        )
+
+        twilio_client.calls.create(
+            url=path,
+            to=self.karen_num.e164,
+            from_=from_number.e164
+        )
 
 class ConferenceChecker(TextHandler):
 
@@ -704,7 +752,14 @@ class ConferenceChecker(TextHandler):
                 )
 
     async def final_answer_text(self, context: RoomContext, text_request: TwilRequest):
-        pass
+        self.d(f'final answer? {text_request.text_body})')
+        partner = PhoneNumber(context.script[_partner])
+        await add_task(SendFinalFinalResult(
+            text_request.caller,
+            partner,
+            text_request.text_body.strip() == '462'
+        ))
+
 
     async def new_text(self, context: RoomContext, text_request: TwilRequest):
         self.d(f'new_text(context, {text_request.text_body})')

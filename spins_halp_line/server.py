@@ -189,6 +189,15 @@ async def ending_32():
 async def ending_33():
     return get_ending_response([End_H])
 
+# final climax responses
+@app.route("/finalclimax/right", methods=['GET', 'POST'])
+async def final_final_right():
+    return get_ending_response([End_H])
+
+@app.route("/finalclimax/wrong", methods=['GET', 'POST'])
+async def final_final_right():
+    return get_ending_response([End_H])
+
 #   _____             __                                _____      _ _ _                _
 #  / ____|           / _|                              / ____|    | | | |              | |
 # | |     ___  _ __ | |_ ___ _ __ ___ _ __   ___ ___  | |     __ _| | | |__   __ _  ___| | _____
