@@ -381,8 +381,8 @@ class TeleState(ScriptState):
 
         print("duplicates_removed!")
         print(f'do_reduce:{state}')
-        print(f':{clave_waiting}')
-        print(f':{karen_waiting}')
+        print(f'clav_waiting:{clave_waiting}({len(clave_waiting)})')
+        print(f'karen_waiting:{karen_waiting}({len(karen_waiting)})')
         if len(clave_waiting) > 1 and len(karen_waiting) > 1:
             # conference time baby!
             clav_p = state[_clav_waiting_for_conf].pop(0)

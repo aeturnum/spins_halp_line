@@ -198,6 +198,7 @@ class RSResource(object):
 
         # support caching results
         data = await self._cache.get(cache_key)
+        print(f'loading resource {self.id}')
         if data is None:
             data = await self.get_info()
             data = await self.load_extended_fields(data)
