@@ -241,7 +241,7 @@ class ConfWait(TextTask):
 
 
 class ConfReady(TextTask):
-    Text = "HEY!\nHey.\n I've got that person you wanted to talk to! Just text back anything when you're ready!!"
+    Text = "HEY!\nHey.\nI've got that person you wanted to talk to! Just text back anything when you're ready!!"
     From_Number_Label = 'conference'
     Image = Telemarketopia_Logo
 
@@ -351,6 +351,7 @@ class TelePlayer(Player):
 
     @property
     def telemarketopia(self) -> Optional[dict]:
+        print(f'telemarketopia accessor: {self.scripts}')
         return self.scripts.get(Telemarketopia_Name).data
 
     @property
