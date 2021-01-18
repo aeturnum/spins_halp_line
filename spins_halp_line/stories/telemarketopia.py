@@ -680,23 +680,24 @@ class SendFinalFinalResult(Task):
 
 class ConferenceChecker(TextHandler):
 
-    async def first_conf_text(self, context: RoomContext, text_request: TwilRequest):
+    async def first_conf_text(self, text_request: TwilRequest, shard: StateShard, script_info: ScriptInfo):
         self.d(f'new_text - player is agreeing to conf?')
         # only set if they are not yet in their first conference
-        context.script[_ready_for_conf] = datetime.now().isoformat()
+        script_info.data[_ready_for_conf] = datetime.now().isoformat()
+        return script_info
 
-    async def first_conf_choice(self, context: RoomContext, text_request: TwilRequest):
+    async def first_conf_choice(self, text_request: TwilRequest, shard: StateShard, script_info: ScriptInfo):
         self.d(f'new_text(context, {text_request.text_body})')
-        context.script[_player_final_choice] = text_request.text_body.strip()
-        partner = TelePlayer(context.script[_partner])
+        script_info.data[_player_final_choice] = text_request.text_body.strip()
+        partner = TelePlayer(script_info.data[_partner])
         await partner.load()
 
         # check if we have a choice
         if partner.telemarketopia.get(_player_final_choice, False):
-            if context.script[_path] == Path_Clavae:
+            if script_info.data[_path] == Path_Clavae:
                 await add_task.send(
                     MakeClimaxCallsTask(text_request.caller,
-                                        context.script[_player_final_choice],
+                                        script_info.data[_player_final_choice],
                                         partner.number,
                                         partner.telemarketopia[_player_final_choice]
                                         )
@@ -706,31 +707,34 @@ class ConferenceChecker(TextHandler):
                     MakeClimaxCallsTask(partner.number,
                                         partner.telemarketopia[_player_final_choice],
                                         text_request.caller,
-                                        context.script[_player_final_choice]
+                                        script_info.data[_player_final_choice]
                                         )
                 )
 
-    async def final_answer_text(self, context: RoomContext, text_request: TwilRequest):
+        return script_info
+
+    async def final_answer_text(self, text_request: TwilRequest, shard: StateShard, script_info: ScriptInfo):
         self.d(f'final answer? {text_request.text_body})')
-        partner = PhoneNumber(context.script[_partner])
+        partner = PhoneNumber(script_info.data[_partner])
         await add_task.send(SendFinalFinalResult(
             text_request.caller,
             partner,
             text_request.text_body.strip() == '462'
         ))
 
+        return script_info
 
-    async def new_text(self, context: RoomContext, text_request: TwilRequest):
+    async def new_text(self, text_request: TwilRequest, shard: StateShard, script_info: ScriptInfo):
         self.d(f'new_text(context, {text_request.text_body})')
         if text_request.num_called == Global_Number_Library.from_label('conference'):
-            if not context.script.get(_player_in_first_conference, False):
-                await self.first_conf_text(context, text_request)
+            if not script_info.data.get(_player_in_first_conference, False):
+                return await self.first_conf_text(text_request, shard, script_info)
 
-            if context.script.get(_has_decision_text):
-                await self.first_conf_choice(context, text_request)
+            if script_info.data.get(_has_decision_text):
+                return await self.first_conf_choice(text_request, shard, script_info)
 
         elif text_request.num_called == Global_Number_Library.from_label('final'):
-            await self.final_answer_text(context, text_request)
+            return await self.final_answer_text(text_request, shard, script_info)
         else:
             self.w(f'Do not know what to do with: [From:{text_request.caller}] -> {text_request.num_called}: {text_request.text_body})')
 

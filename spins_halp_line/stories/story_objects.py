@@ -193,8 +193,8 @@ class TextHandler(Logger):
     Name = "Base Text Handler"
 
     # Must add choice to room state outside of this
-    async def new_text(self, context: RoomContext, text_request: TwilRequest):
-        raise ValueError("Cannot use base class of Room")
+    async def new_text(self, text_request: TwilRequest, shard: StateShard, script_info: ScriptInfo):
+        return script_info
 
     # load any resources that we need
     async def load(self):
@@ -715,23 +715,23 @@ class Script(Logger):
             self.d(f'Player {request.player} is not on our script, returning!')
             return
 
-        scene_state: SceneAndState = self._get_scene_state(script_info, request.num_called)
-        scene_info = scene_state.scene._get_state(script_info)
+        # scene_state: SceneAndState = self._get_scene_state(script_info, request.num_called)
+        # scene_info = scene_state.scene._get_state(script_info)
 
         for handler in self.text_handlers:
             shard: StateShard = self.state.shard
             text_state: dict = script_info.text_handler_states.get(handler.Name)
 
-            context = RoomContext(request.player, shard, script_info, scene_info, text_state)
+            # context = RoomContext(request.player, shard, script_info
 
-            await handler.new_text(context, request)
+            script_info = await handler.new_text(request, shard, script_info)
 
-            script_info, scene_info, text_state = context._pass_back_changes(
-                script_info,
-                scene_info,
-                text_state,
-                spoil_state=True  # the room state stops being fresh now
-            )
+            # script_info, scene_info, text_state = context._pass_back_changes(
+            #     script_info,
+            #     scene_info,
+            #     text_state,
+            #     spoil_state=True  # the room state stops being fresh now
+            # )
 
             script_info.text_handler_states[handler.Name] = text_state
 
