@@ -346,87 +346,6 @@ _kar_waiting_for_conf = 'karen_play_waiting_for_conf'
 _waiting_for_conf = 'conferences_pairs_in_progress'
 _pair_waiting_for_2nd_conf = 'karen_clave_players_last_conf'
 
-class TeleState(ScriptState):
-
-    def __init__(self):
-        super(TeleState, self).__init__(
-            {
-                _clavae_players: [],
-                _karen_players: [],
-                _clav_waiting_for_conf: [],
-                _kar_waiting_for_conf: [],
-                _waiting_for_conf: [],
-                _pair_waiting_for_2nd_conf: [],
-            }
-        )
-
-    @staticmethod
-    async def do_reduce(state: dict, shard: StateShard):
-        # todo: think about doing something about how recently players have been active?
-        # todo: players who have been out for a while might not want to play
-
-        print('do_reduce')
-        print(f'do_reduce:{state}')
-        # move remove people who have been moved back
-
-        clave_waiting = state.get(_clav_waiting_for_conf)
-        karen_waiting = state.get(_kar_waiting_for_conf)
-        to_remove = []
-        for pair in state[_waiting_for_conf]:
-            if pair[0] in clave_waiting and pair[1] in karen_waiting:
-                to_remove.append(pair)
-
-        # actually remove the things we just found
-        for pair in to_remove:
-            state[_waiting_for_conf].remove(pair)
-
-        # remove_from_clav = []
-        # remove_from_kar = []
-        # clave = state.get(_clavae_players)
-        # karen = state.get(_karen_players)
-        # for clav_player in clave:
-        #     if clav_player in karen:
-        #         if (len(clave) + len(remove_from_clav)) > (len(karen) + len(remove_from_kar)):
-        #             print(f"Player {clav_player} is in both queues, removing from Karen because that one is longer")
-        #             remove_from_kar.append(clav_player)
-        #         else:
-        #             print(f"Player {clav_player} is in both queues, removing from Clavae because that one is longer")
-        #             remove_from_clav.append(clav_player)
-
-        # for player in remove_from_clav:
-        #     state.get(_clavae_players).remove(player)
-        #
-        # for player in remove_from_kar:
-        #     state.get(_karen_players).remove(player)
-
-        print("duplicates_removed!")
-        print(f'do_reduce:{state}')
-        print(f'clav_waiting:{clave_waiting}({len(clave_waiting)})')
-        print(f'karen_waiting:{karen_waiting}({len(karen_waiting)})')
-        clave_waiting = state.get(_clav_waiting_for_conf)
-        karen_waiting = state.get(_kar_waiting_for_conf)
-        if len(clave_waiting) >= 1 and len(karen_waiting) >= 1:
-            # conference time baby!
-            clav_p = state[_clav_waiting_for_conf].pop(0)
-            karen_p = state[_kar_waiting_for_conf].pop(0)
-            print(f'Starting conf with {[clav_p, karen_p]}')
-            state[_waiting_for_conf].append([clav_p, karen_p])
-            await add_task.send(
-                ConferenceTask(
-                    clav_p,
-                    karen_p,
-                    shard
-                )
-            )
-
-        return state
-
-    async def _after_load(self):
-        # WE ARE LOCKED HERE
-        for pair in self._state.get(_waiting_for_conf, []):
-            self._state[_clav_waiting_for_conf].append(pair[0])
-            self._state[_kar_waiting_for_conf].append(pair[1])
-
 
 class TelePlayer(Player):
 
@@ -850,6 +769,89 @@ class ConferenceEventHandler(Logger):
 
 
 TwilConference._custom_handlers.append(ConferenceEventHandler())
+
+
+class TeleState(ScriptState):
+
+    def __init__(self):
+        super(TeleState, self).__init__(
+            {
+                _clavae_players: [],
+                _karen_players: [],
+                _clav_waiting_for_conf: [],
+                _kar_waiting_for_conf: [],
+                _waiting_for_conf: [],
+                _pair_waiting_for_2nd_conf: [],
+            }
+        )
+
+    @staticmethod
+    async def do_reduce(state: dict, shard: StateShard):
+        # todo: think about doing something about how recently players have been active?
+        # todo: players who have been out for a while might not want to play
+
+        print('do_reduce')
+        print(f'do_reduce:{state}')
+        # move remove people who have been moved back
+
+        clave_waiting = state.get(_clav_waiting_for_conf)
+        karen_waiting = state.get(_kar_waiting_for_conf)
+        to_remove = []
+        for pair in state[_waiting_for_conf]:
+            if pair[0] in clave_waiting and pair[1] in karen_waiting:
+                to_remove.append(pair)
+
+        # actually remove the things we just found
+        for pair in to_remove:
+            state[_waiting_for_conf].remove(pair)
+
+        # remove_from_clav = []
+        # remove_from_kar = []
+        # clave = state.get(_clavae_players)
+        # karen = state.get(_karen_players)
+        # for clav_player in clave:
+        #     if clav_player in karen:
+        #         if (len(clave) + len(remove_from_clav)) > (len(karen) + len(remove_from_kar)):
+        #             print(f"Player {clav_player} is in both queues, removing from Karen because that one is longer")
+        #             remove_from_kar.append(clav_player)
+        #         else:
+        #             print(f"Player {clav_player} is in both queues, removing from Clavae because that one is longer")
+        #             remove_from_clav.append(clav_player)
+
+        # for player in remove_from_clav:
+        #     state.get(_clavae_players).remove(player)
+        #
+        # for player in remove_from_kar:
+        #     state.get(_karen_players).remove(player)
+
+        print("duplicates_removed!")
+        print(f'do_reduce:{state}')
+        print(f'clav_waiting:{clave_waiting}({len(clave_waiting)})')
+        print(f'karen_waiting:{karen_waiting}({len(karen_waiting)})')
+        clave_waiting = state.get(_clav_waiting_for_conf)
+        karen_waiting = state.get(_kar_waiting_for_conf)
+        if len(clave_waiting) >= 1 and len(karen_waiting) >= 1:
+            # conference time baby!
+            clav_p = state[_clav_waiting_for_conf].pop(0)
+            karen_p = state[_kar_waiting_for_conf].pop(0)
+            print(f'Starting conf with {[clav_p, karen_p]}')
+            await add_task.send(
+                ConfStartFirst(
+                    clav_p,
+                    karen_p,
+                    shard
+                )
+            )
+            state[_waiting_for_conf].append([clav_p, karen_p])
+
+        return state
+
+    async def _after_load(self):
+        # WE ARE LOCKED HERE
+        for pair in self._state.get(_waiting_for_conf, []):
+            self._state[_clav_waiting_for_conf].append(pair[0])
+            self._state[_kar_waiting_for_conf].append(pair[1])
+
 
 
 class TipLineStart(TeleRoom):
