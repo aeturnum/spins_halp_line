@@ -66,10 +66,9 @@ class Change:
 
         if isinstance(to, list):
             # todo: figure out if we want this
-            # if self.Value in to:
-            #     # no dupes!
-            #     to.remove(self.Value)
-            to.extend(self.Value)
+            for v in self.Value:
+                if v not in to:
+                    to.append(v)
         else:
             print(f'Target value is {type(to)}, only lists supported')
             return

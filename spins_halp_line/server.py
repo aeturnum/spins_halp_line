@@ -255,16 +255,27 @@ async def debug_conf_call():
 
     # update shared state
     shard: TeleShard = telemarketopia.state_manager.shard
-    shard.append('clavae_in_conf', num1)
-    shard.append('clavae_players', num1)
-    shard.append('karen_in_conf', num2)
-    shard.append('karen_players', num2)
-    await telemarketopia.integrate_shard(shard)
+    if num1 not in shard.clavae_players:
+        shard.append('clavae_players', num1)
+    if num2 not in shard.karen_players:
+        shard.append('karen_players', num2)
 
-    # start process
-    await add_task.send(
-        ConfStartFirst(StoryInfo(num1, num2, telemarketopia.state_manager.shard))
-    )
+
+    # If this is debugging an already existing conference, they'll
+    if num1 in shard.clavae_waiting_for_conf and num2 in shard.karen_waiting_for_conf:
+        # we don't need to start manually, the reduce cycle will do it for us
+        await telemarketopia.integrate_shard(shard)
+    else:
+
+        shard.append('clavae_waiting_for_conf', num1)
+        shard.append('karen_waiting_for_conf', num2)
+        await telemarketopia.integrate_shard(shard)
+
+
+        # # start process
+        # await add_task.send(
+        #     ConfStartFirst(StoryInfo(num1, num2, telemarketopia.state_manager.shard))
+        # )
 
     return ""
 
