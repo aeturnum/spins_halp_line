@@ -141,13 +141,14 @@ class TelePlayer(Player):
         print(f'record_timestamp(name:{name}) -> {data}')
 
     def check_timestamp(self, name: str, within: timedelta):
-        self.d(f'check_timestamp(name:{name}, within:{timedelta}): {self.telemarketopia}')
+        # self.d(f'check_timestamp(name:{name}, within:{timedelta}): {self.telemarketopia}')
         old_ts = self.telemarketopia.get(name, None)
         if old_ts:
             ready = datetime.fromisoformat(old_ts)
-            self.d(f'check_timestamp(name:{name}, within:{timedelta}) - old_ts:{ready}, {within} < {(datetime.now() - ready)}')
-            return within < (datetime.now() - ready)
+            self.d(f'check_timestamp(name:{name}) -> {within > (datetime.now() - ready)}')
+            return within > (datetime.now() - ready)
 
+        self.d(f'check_timestamp(name:{name}) -> False')
         return False
 
     @property

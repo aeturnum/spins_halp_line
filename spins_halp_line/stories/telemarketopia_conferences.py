@@ -124,8 +124,8 @@ class ReturnPlayers(ConferenceTask):
         # Put back into queue, but put them at the back of the queue if they didn't reply
         self.d(f'ReturnPlayers({self.info}): registering moves')
         self.info.shard.move(
-            "clav_in_conf",
-            "clav_waiting_for_conf",
+            "clave_in_conf",
+            "clave_waiting_for_conf",
             self.info.c_num.e164,
             to_front=c_r)
 

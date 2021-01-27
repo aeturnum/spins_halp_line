@@ -180,7 +180,7 @@ class TwilConference(Logger):
             if event_name == 'conference-start': # conference start, mark time
                 self.started = datetime.now()
 
-            dirty = dirty or await self.do_handle_event(self, event_name, participant)
+            dirty = dirty or await self.do_handle_event(event_name, participant)
 
             if dirty:
                 await self._save_conference_list(True)
