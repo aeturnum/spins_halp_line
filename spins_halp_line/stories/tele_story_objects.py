@@ -139,9 +139,11 @@ class TelePlayer(Player):
         self.telemarketopia[name] = datetime.now().isoformat()
 
     def check_timestamp(self, name: str, within: timedelta):
+        self.d(f'check_timestamp(name:{name}, within:{timedelta}')
         old_ts = self.telemarketopia.get(name, None)
         if old_ts:
             ready = datetime.fromisoformat(old_ts)
+            self.d(f'check_timestamp(name:{name}, within:{timedelta}) - old_ts:{ready}, {within} < {(datetime.now() - ready)}')
             return within < (datetime.now() - ready)
 
         return False

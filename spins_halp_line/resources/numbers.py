@@ -39,6 +39,13 @@ class PhoneNumber:
 
         return False
 
+    # todo: I keep fucking up and putting PhoneNumbers directly into dictionaries that will get serialized to JSON. Now, this should be an easy thing to handle - a PhoneNumber has a simple way to be serialized (.e164), but it doesn't seem like the standard `json` library has an interface on objects that it'll use to serialize non-standard things.# todo:
+
+    # todo: So, we have three options:
+    # todo: - add a central json helper file which we route all json encode / decode calls through, and which has a subclass of JsonEncoder that will handle phone numbers properly
+    # todo: - find another JSON library that *does* have a standardized serialize call that it'll call on objects it doesn't know how to seralize
+    # todo: - add code that checks to make sure we aren't adding non-basic objects to states (probably the hardest solution)
+
     def toJson(self):
         return self.e164
 
@@ -139,7 +146,6 @@ class NumberLibrary:
         return PhoneNumber(random.choice(candidates))
 
     def from_label(self, label: str) -> PhoneNumber:
-        print(f'from_label({label}): {self.labels}')
         if label in self.labels:
             return PhoneNumber(self.labels[label])
 

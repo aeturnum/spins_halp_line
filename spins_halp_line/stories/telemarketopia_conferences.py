@@ -115,11 +115,14 @@ class ReturnPlayers(ConferenceTask):
         cls = ConfUnReadyIfReply
         if not ready:
             cls = ConfUnReadyIfNoReply
+        self.d(f'unready_text({ready}, {number}): {cls}')
         await send_text(cls, number)
 
     async def execute_conference_action(self):
+        self.d(f'ReturnPlayers({self.info})')
         c_r, k_r = await self.check_player_status()
         # Put back into queue, but put them at the back of the queue if they didn't reply
+        self.d(f'ReturnPlayers({self.info}): registering moves')
         self.info.shard.move(
             "clav_in_conf",
             "clav_waiting_for_conf",
@@ -132,10 +135,12 @@ class ReturnPlayers(ConferenceTask):
             self.info.k_num.e164,
             to_front=k_r)
 
+        self.d(f'ReturnPlayers({self.info}): sending texts')
         # Text player to let them know the conference is off
         await self.unready_text(c_r, self.info.c_num)
         await self.unready_text(k_r, self.info.k_num)
 
+        self.d(f'ReturnPlayers({self.info}): queueing update')
         # Eventually put players back in queue
         await self.info.shard.queue_state_update()
 
@@ -156,6 +161,9 @@ class ConnectFirstConference(ConferenceTask):
 
 class ConfWaitForPlayers(ConferenceTask):
 
+    _wait_before_retext = 60 * 5
+    _wait_before_give_up = 60 * 10
+
     @dataclass
     class ConfWaitForPlayersState:
         time_elapsed: int = 0
@@ -170,7 +178,8 @@ class ConfWaitForPlayers(ConferenceTask):
 
     async def maybe_send_text(self, ready: bool, number: PhoneNumber):
         text_count = self.state.text_counts[number.e164]
-        if not ready and self.state.time_elapsed > 60 * 5 and text_count == 1:
+        if not ready and self.state.time_elapsed > self._wait_before_retext and text_count == 1:
+            self.d(f'Re-texting player {number} as we have not heard from them yet...')
             await send_text(ConfReady, number)
             self.state.text_counts[number.e164] += 1
 
@@ -182,8 +191,8 @@ class ConfWaitForPlayers(ConferenceTask):
 
         task_to_start = None
         if not c_r and not k_r:
-            self.d(f"ConfWaitForPlayers({self.info}): {c_r}, {k_r}: someone isn't ready!")
-            if self.state.time_elapsed < 60 * 10:
+            self.d(f"ConfWaitForPlayers({self.info}): {c_r}, {k_r}: someone isn't ready after {self.state.time_elapsed}s!")
+            if self.state.time_elapsed < self._wait_before_give_up:
                 # wait another 15 seconds and check again
                 task_to_start = ConfWaitForPlayers(self.info, 15, self.state)
             else:
