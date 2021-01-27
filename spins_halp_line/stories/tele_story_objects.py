@@ -137,9 +137,10 @@ class TelePlayer(Player):
 
     def record_timestamp(self, name: str):
         self.telemarketopia[name] = datetime.now().isoformat()
+        self.d(f'record_timestamp(name:{name}) -> {self.telemarketopia}')
 
     def check_timestamp(self, name: str, within: timedelta):
-        self.d(f'check_timestamp(name:{name}, within:{timedelta}')
+        self.d(f'check_timestamp(name:{name}, within:{timedelta}): {self.telemarketopia}')
         old_ts = self.telemarketopia.get(name, None)
         if old_ts:
             ready = datetime.fromisoformat(old_ts)
