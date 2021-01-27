@@ -224,8 +224,8 @@ class ConfStartFirst(ConferenceTask):
 
         # remove info the players got the text
         # clear
-        self.info.clv_p.clear([_ready_for_conf, _in_final_final])
-        self.info.kar_p.clear([_ready_for_conf, _in_final_final])
+        await self.info.clv_p.clear([_ready_for_conf, _in_final_final])
+        await self.info.kar_p.clear([_ready_for_conf, _in_final_final])
 
         self.d(f"ConfStartFirst({self.info}): cleared old flags")
         await send_text(ConfReady, self.info.c_num)
