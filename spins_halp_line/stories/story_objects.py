@@ -82,7 +82,10 @@ class Change:
             self.Value.append(val)
 
     def set_from(self, name, target):
+        print(f'Change.set_from({name}, {target})')
         frm = getattr(target, name, None)
+        print(f'Change.set_from({name}, {target}) -> {frm}')
+        print(f'Change.set_from({name}, {target}) -> Value:{self.Value}')
         if not all([v in frm for v in self.Value]):
             raise ValueError(f'Could not set from to {name} - value not in source {target}.{name} = {frm}')
 
@@ -130,10 +133,7 @@ class Shard:
 
         self._changes.append(change)
 
-    def move(self, frm, to, value, key=None, to_front=False):
-        # if getattr(key, ):
-        #     raise ValueError("Cannot append to things that aren't here!")
-
+    def move(self, frm, to, value, to_front=False):
         change = Change(To=to, At_Front=to_front)
         change.set_value(value)
         change.set_from(frm, self)
