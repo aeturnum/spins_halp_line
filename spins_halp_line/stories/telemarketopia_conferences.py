@@ -11,7 +11,7 @@ from spins_halp_line.constants import Root_Url, Credentials
 from spins_halp_line.media.common import Conference_Nudge, Clavae_Conference_Intro, Karen_Conference_Info
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.stories.tele_constants import (
-    _ready_for_conf, _in_final_final,
+    _ready_for_conf, _in_final_final, _player_in_first_conference, _partner,
     ConfUnReadyIfReply, ConfUnReadyIfNoReply, ConfReady,
     CFinalPuzzle1, KFinalPuzzle1, CFinalPuzzle2, KFinalPuzzle2
 )
@@ -129,8 +129,8 @@ class ReturnPlayers(ConferenceTask):
         # Put back into queue, but put them at the back of the queue if they didn't reply
         self.d(f'ReturnPlayers({self.info}): registering moves')
         self.info.shard.move(
-            "clave_in_conf",
-            "clave_waiting_for_conf",
+            "clavae_in_conf",
+            "clavae_waiting_for_conf",
             self.info.c_num.e164,
             to_front=c_r)
 
@@ -224,8 +224,8 @@ class ConfStartFirst(ConferenceTask):
 
         # remove info the players got the text
         # clear
-        await self.info.clv_p.clear([_ready_for_conf, _in_final_final])
-        await self.info.kar_p.clear([_ready_for_conf, _in_final_final])
+        await self.info.clv_p.clear([_ready_for_conf, _in_final_final, _player_in_first_conference, _partner])
+        await self.info.kar_p.clear([_ready_for_conf, _in_final_final, _player_in_first_conference, _partner])
 
         self.d(f"ConfStartFirst({self.info}): cleared old flags")
         await send_text(ConfReady, self.info.c_num)

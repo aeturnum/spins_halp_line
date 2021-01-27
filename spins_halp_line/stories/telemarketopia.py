@@ -159,7 +159,18 @@ class TeleStateManager(ScriptStateManager):
         return ts
 
     def filter_list(self, player_list: List, player_set: Set):
-        return [p for p in player_list if p in player_set]
+        result = []
+        added = set()
+
+        # updated to both:
+        # only add players who are on the whitelist
+        # and also only add them once to each list
+        for p in player_list:
+            if p not in added and p in player_set:
+                added.add(p)
+                result.append(p)
+
+        return result
 
     def remove_dupes(self, player_list, player_set = None):
         if not player_set:

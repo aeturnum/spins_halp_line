@@ -86,7 +86,7 @@ class Change:
 
     def set_from(self, name, target):
         print(f'Change.set_from({name}, {target})')
-        frm = getattr(target, name, None)
+        frm = getattr(target, name, [])
         print(f'Change.set_from({name}, {target}) -> {frm}')
         print(f'Change.set_from({name}, {target}) -> Value:{self.Value}')
         if not all([v in frm for v in self.Value]):
@@ -126,7 +126,14 @@ class Shard:
 
         return super(Shard, self).__setattr__(key, value)
 
+    def _check_to(self, to):
+        sentinal = 'sentinal_to-value'
+        val = getattr(self, to, sentinal)
+        if val == sentinal:
+            raise ValueError(f"It seems like {self} does not contain {to}")
+
     def append(self, to, value, to_front=False):
+        self._check_to(to)
         change = Change(To=to, At_Front=to_front)
         change.set_value(value)
 
@@ -137,6 +144,7 @@ class Shard:
         self._changes.append(change)
 
     def move(self, frm, to, value, to_front=False):
+        self._check_to(to)
         change = Change(To=to, At_Front=to_front)
         change.set_value(value)
         change.set_from(frm, self)
@@ -691,9 +699,9 @@ class ScriptStateManager(Logger):
             db_data = await db.get(self._key).autodecode
             if isinstance(db_data, dict):
                 self.d('Save_to_redis...')
-                self.d(f'Save_to_redis: {self._state}')
-                self.d(f'Save_to_redis: {self._state_dict}')
-                self.d(f'Save_to_redis: {db_data}')
+                self.d(f'Save_to_redis:      state: {self._state}')
+                self.d(f'Save_to_redis: state_dict: {self._state_dict}')
+                self.d(f'Save_to_redis:    db_dict: {db_data}')
                 self.d(f'Save_to_redis: self._state_dict == db_data ={self._state_dict == db_data}')
                 if self._state_dict == db_data:
                     self.d(f'save_to_redis: no changes from version in database')
