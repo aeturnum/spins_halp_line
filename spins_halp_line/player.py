@@ -208,6 +208,7 @@ class Player(Logger):
 
         # self.info = self._load_info(self._data)
         self.scripts = self._load_scripts(data)
+        self.d(f'Loaded new scripts!')
 
         self._data = data
         self._loaded = True
