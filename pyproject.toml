@@ -20,6 +20,7 @@ pytest-pudb = "^0.7.0"
 phonenumbers = "^8.12.16"
 Quart = "0.13.*"
 trio = "0.17.*"
+requests = "2.7"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

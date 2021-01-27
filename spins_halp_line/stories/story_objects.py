@@ -1,5 +1,5 @@
-from typing import List, Optional, Dict, Union, Tuple, Callable
-from dataclasses import dataclass
+from typing import List, Optional, Dict, Union, Tuple, Callable, Any
+from dataclasses import dataclass, field, asdict
 import json
 import traceback
 
@@ -21,61 +21,131 @@ from spins_halp_line.events import send_event
 from spins_halp_line.errors import StoryNavigationException
 from spins_halp_line.actions.errors import error_sms
 
-class ReductionTask(Task):
-    def __init__(self, state:'ScriptState'):
-        super(ReductionTask, self).__init__()
-        # remember that Task supports a delay arg if we need it
-        self.state = state
 
-    async def execute(self):
-        self.d(f'ReductionTask')
-        await self.state.reduce()
-        self.d(f'ReductionTask done')
+@dataclass
+class Change:
+    # (out of date) format
+    # {
+    #   'to': <key of the state that is getting the addition>
+    #   'value': <for lists, this is a new list to extend the old one with; for dicts it is a single value>
+    #   'key': <if changing a dict this is the key>
+    # }
+    From: str = None
+    To: str = None
+    Value: Any = None
+    # todo: add dict support
+    # Key: str = None
+    At_Front: bool = False
 
-class StateShard(dict):
-    def __init__(self, state: dict, parent):
-        super(StateShard, self).__init__()
-        self.update(state)
+    def _remove(self, field: Union[List, dict], val):
+        if isinstance(field, list):
+            for v in val:
+                field.remove(v)
+        else:
+            raise ValueError(f"Cannot remove value from non-list: {type(field)}")
+
+        return field
+
+    def apply(self, target: Any):
+
+        to = getattr(target, self.To, None)
+        frm = None
+        if self.From:
+            frm = getattr(target, self.From, None)
+            if frm is None:
+                print(f"Could not apply {self} - {self.From} does not exist")
+                return
+
+        if to is None:
+            print(f"Could not apply {self} - {self.To} does not exist")
+            return
+
+        if frm:
+            frm = self._remove(frm, self.Value)
+            setattr(target, self.From, frm)
+
+        if isinstance(to, list):
+            to.extend(self.Value)
+        else:
+            print(f'Target value is {type(to)}, only lists supported')
+            return
+        # elif isinstance(to, dict):
+        #     to[Change.Key] = Change.Value
+
+        setattr(target, self.To, to)
+
+    def set_value(self, val):
+        self.Value = []
+        if isinstance(val, list):
+            self.Value.extend(val)
+        else:
+            self.Value.append(val)
+
+    def set_from(self, name, target):
+        frm = getattr(target, name, None)
+        if not all([v in frm for v in self.Value]):
+            raise ValueError(f'Could not set from to {name} - value not in source {target}.{name} = {frm}')
+
+        self.From = name
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        s = f'Ch['
+        if self.From:
+            s += f'{self.From}->'
+        s += f'{self.To}]'
+        # if self.Key
+        #     s += f'[{self.Key}]'
+        s += f' = {self.Value}'
+
+        return s
+
+class Shard:
+    def __init__(self):
+        super(Shard, self).__init__()
+        super(Shard, self).__setattr__('_parent', None)
+        super(Shard, self).__setattr__('_changes', [])
+        # self._changes: List[Change] = []
+        # check setting of variables here
+
+
+    def set_parent(self, parent):
         self._parent = parent
-        # format
-        # {
-        #   'to': <key of the state that is getting the addition>
-        #   'value': <for lists, this is a new list to extend the old one with; for dicts it is a single value>
-        #   'key': <if changing a dict this is the key>
-        # }
-        self._changes = []
 
-    def __setitem__(self, key, value):
-        raise ValueError("StateShard's cannot be changed - use append!")
+    def __setattr__(self, key, value):
+        if self._parent is not None and key not in {'_parent', '_changes'}:
+            raise ValueError("Not allowed to change attributes!")
 
-    def append(self, key, *vals, to_front=False):
-        if key not in self:
-            raise ValueError("Cannot append to things that aren't here!")
+        return super(Shard, self).__setattr__(key, value)
 
-        change = {
-            'to': key,
-            'to_front':to_front
-        }
+    def append(self, to, value, to_front=False):
+        change = Change(To=to, At_Front=to_front)
+        change.set_value(value)
 
-        if isinstance(self[key], list):
-            change['value'] = []
-            for v in vals:
-                if isinstance(v, list):
-                    change['value'].extend(v)
-                else:
-                    change['value'].append(v)
-
-        if isinstance(self[key], dict):
-            if len(vals) != 2:
-                raise ValueError(f"When appending to a dictionary, you must supply a key and a value! Not {vals}")
-
-            change['key'] = vals[0]
-            change['value'] = vals[1]
+        # if isinstance(change_target, dict):
+        #     change.Key = key
+        #     change.Value = value
 
         self._changes.append(change)
 
-    async def trigger_reduction(self):
-        await add_task(ReductionTask(self._parent))
+    def move(self, frm, to, value, key=None, to_front=False):
+        # if getattr(key, ):
+        #     raise ValueError("Cannot append to things that aren't here!")
+
+        change = Change(To=to, At_Front=to_front)
+        change.set_value(value)
+        change.set_from(frm, self)
+
+        # if isinstance(change_target, dict):
+        #     change.Key = key
+        #     change.Value = value
+
+        self._changes.append(change)
+
+    async def queue_state_update(self):
+        await self._parent.integrate_shard(self)
 
     async def integrate(self):
         # this works because python just doesn't care about circular references
@@ -83,11 +153,12 @@ class StateShard(dict):
             await self._parent.integrate(self._changes)
             self._changes = []
 
+
 class RoomContext(dict):
 
     def __init__(self,
                  player: Player,
-                 shard: StateShard,
+                 shard: Shard,
                  script_state: ScriptInfo,
                  scene_state: SceneInfo,
                  room_state: Union[RoomInfo, dict]):
@@ -193,7 +264,7 @@ class TextHandler(Logger):
     Name = "Base Text Handler"
 
     # Must add choice to room state outside of this
-    async def new_text(self, text_request: TwilRequest, shard: StateShard, script_info: ScriptInfo):
+    async def new_text(self, text_request: TwilRequest, shard: Shard, script_info: ScriptInfo):
         return script_info
 
     # load any resources that we need
@@ -219,13 +290,13 @@ class TextHandler(Logger):
     def __repr__(self):
         return str(self)
 
+
 class Room(Logger):
     Name = "Base room"
     # REMEMBER
     # We cannot store things in the room object because the room object is *shared between players*
     # so one player would change the other room and the other would see it.
     # Everything has to be done by passing around per-player state
-
 
     # Must add choice to room state outside of this
     async def new_player_choice(self, choice: str, context: RoomContext):
@@ -320,7 +391,7 @@ class Scene(Logger):
                     self.d(f"done! - no previous room {done}")
                 else:
                     # we are done if there are no choices associated with this
-                    done = self.choices_for_room(prev_room) == None
+                    done = self.choices_for_room(prev_room) is None
                     self.d(f"done? {done}")
             else:
                 self.d(f"not done - have rooms in queue {done}")
@@ -334,7 +405,7 @@ class Scene(Logger):
         self.d(f"Choices_for_room({room}) -> {choices}")
         return choices
 
-    async def play(self, shard: StateShard, request: TwilRequest, script_state: ScriptInfo):
+    async def play(self, shard: Shard, request: TwilRequest, script_state: ScriptInfo):
         self.d(f'play({request}, {script_state})')
         scene_state = self._get_state(script_state)
         self.d(f'play({request}, {script_state}): {scene_state}')
@@ -388,7 +459,7 @@ class Scene(Logger):
                 script_state,
                 scene_state,
                 room_state,
-                spoil_state=True # the room state stops being fresh now
+                spoil_state=True  # the room state stops being fresh now
             )
 
             scene_state.rooms_visited.append(room.Name)
@@ -400,7 +471,7 @@ class Scene(Logger):
             scene_state.room_states[room.Name] = room_state
             script_state.scene_states[self.Name] = scene_state
         except Exception as e:
-            script_state_snap.restore() # undo any changes, though we generally won't save anything
+            script_state_snap.restore()  # undo any changes, though we generally won't save anything
             raise StoryNavigationException("Failed while trying to save state", e)
 
         return twilio_action
@@ -421,7 +492,7 @@ class Scene(Logger):
     async def _notify_last_room_of_choice(
             self,
             request: TwilRequest,
-            shard: StateShard,
+            shard: Shard,
             script_state: ScriptInfo,
             our_info: SceneInfo) -> Tuple[ScriptInfo, SceneInfo]:
         # check that there's a previous room
@@ -441,7 +512,6 @@ class Scene(Logger):
 
         return script_state, our_info
 
-
     def _get_queue(self, request: TwilRequest, script_state: ScriptInfo, our_info: SceneInfo) -> List[str]:
         self.d(f"_get_queue()")
         if our_info.has_rooms_in_queue:
@@ -454,7 +524,7 @@ class Scene(Logger):
         # need to turn the previous room into a room object:
         prev_room = self._name_to_room(our_info.prev_room)
         self.d(f"_get_queue() previous room: {prev_room}")
-        if self.choices_for_room(prev_room) != None:
+        if self.choices_for_room(prev_room) is not None:
             number = str(request.digits)
             queue = self._get_choice_for_request(number, prev_room, script_state)
 
@@ -502,26 +572,39 @@ class SceneAndState:
 # 	    |	\- integrate() -> send back to state if there are changes
 #    	\- reducer -> async task, run on end of request, that can remove items, state is locked while it runs
 
+@dataclass
+class ScriptState:
+    pass
 
-class ScriptState(Logger):
 
-    _shard_class = StateShard
+class StateShard(ScriptState, Shard):
+    def __init__(self, *args, **kwargs):
+        Shard.__init__(self)
+        ScriptState.__init__(self, *args, **kwargs)
 
-    def __init__(self, initial_state: dict):
-        super(ScriptState, self).__init__()
+
+class ScriptStateManager(Logger):
+
+    def __init__(self):
+        super(ScriptStateManager, self).__init__()
         self._key = None
-        self._state = {
-            'version': 0
-        }
-        self._state.update(initial_state)
-
+        self._state = self._make_new_state()
+        self._version = 0
+        self._generation = 0
+        # self._state.update(initial_state)
         self._lock = trio.Lock()
+
+    def _make_new_state(self, base: dict = {}) -> ScriptState:
+        return ScriptState(**base)
+
+    def _make_shard(self) -> StateShard:
+        return StateShard(**self._state_dict)
 
     def set_key(self, key):
         self._key = key
 
     # This is a callback used by shards to 'ship' their changes back to the script state
-    async def integrate(self, changes):
+    async def integrate(self, changes: List[Change]):
         self.d(f'Integrating: {changes}')
         if changes == []:
             return
@@ -529,43 +612,58 @@ class ScriptState(Logger):
         async with LockManager(self._lock):
             await self.sync_redis(True)
             for change in changes:
-                to = change['to']
-                value = change['value']
-                if 'key' in change:
-                    self._state[to][change['key']] = value
-                else:
-                    if value in self._state[to]:
-                        self._state[to].remove(value)
+                change.apply(self._state)
 
-                    if change['to_front']:
-                        for v in value:
-                            self._state[to].insert(0, v)
-                    else:
-                        self._state[to].extend(value)
+            await self.save_to_redis(True)
 
+    # primaraly used for debugging to overwrite old versions
+    async def set_new_generation(self):
+        async with LockManager(self._lock):
+            # save whatever our state is
+            our_state = self._state_dict
+            # get latest version, then lock so our generation is up to date
+            await self.sync_redis(True)
+            # make sure we will, at worst, collide with another parallel process
+            latest_generation = self._generation
+            self._state = self._make_new_state(our_state)
+            # this version will override any other
+            self._generation = latest_generation + 1
+
+            # save this version to redis
             await self.save_to_redis(True)
 
     @property
     def version(self):
-        return self._state['version']
+        return self._version
 
     @property
     def shard(self):
-        return self._shard_class(self._state, self)
+        return self._make_shard()
+
+    @property
+    def _state_dict(self) -> dict:
+        d = asdict(self._state)
+        d['version'] = self._version
+        d['generation'] = self._generation
+        return d
 
     # This function is what should be overridden in child classes.
     # Then the child class should be passed into the script when you construct it.
-    @staticmethod
-    async def do_reduce( state: dict, shard:StateShard):
+    async def do_reduce(self, state: ScriptState, shard: StateShard):
         return state
+
+    async def on_startup(self):
+        pass
 
     # This is used to check if our version is out of date
     async def sync_redis(self, locked=False):
         db = new_redis()
         async with LockManager(self._lock, already_locked=locked):
             db_version = await db.get(self._key).autodecode
-            if db_version and db_version['version'] > self.version:
-                self._state = db_version
+            if db_version:
+                # check if either version or generation are newer
+                if db_version['version'] > self.version or db_version['generation'] > self._generation:
+                    self._state = self._make_new_state(db_version)
 
     # This calls the static do_reduce that will make any changes to the state in a
     # way that's safe and save the results into redis.
@@ -584,12 +682,12 @@ class ScriptState(Logger):
         async with LockManager(self._lock, already_locked=locked):
             db_data = await db.get(self._key).autodecode
             if isinstance(db_data, dict):
-                if self._state == db_data:
+                if self._state_dict == db_data:
                     self.d(f'save_to_redis: no changes from version in database')
                     # there are no changes to save, no need to increase the verson
                     return
-            self._state['version'] += 1
-            payload = json.dumps(self._state)
+            self._version += 1
+            payload = json.dumps(self._state_dict)
             self.d(f'save_to_redis: saving new version to redis: {payload}')
             await db.set(self._key, payload)
 
@@ -599,17 +697,26 @@ class ScriptState(Logger):
         async with LockManager(self._lock):
             db_data = await db.get(self._key)
             if db_data:
+                version = -1
+                generation = -1
                 try:
-                    self._state = json.loads(db_data)
-                except Exception:
-                    pass
-            await self._after_load()
+                    state_data = json.loads(db_data)
+                    # definately throw an exception here if these keys don't exist
+                    version = state_data['version']
+                    generation = state_data['generation']
+                    del state_data['version']
+                    del state_data['generation']
+
+                    self._state = self._make_new_state(state_data)
+                except Exception as e:
+                    self.e(f'Encountered exception {e} while trying to load state')
+                    version = self._version
+                    generation = self._generation
+
+                self._version = version
+                self._generation = generation
 
             self.d(f'load_from_redis: loaded state dict {self._state}')
-
-    async def _after_load(self):
-        # WE ARE LOCKED HERE
-        pass
 
 class AfterRequestActions(Task):
 
@@ -623,7 +730,7 @@ class AfterRequestActions(Task):
     #
     # If we ever need this to be fair and ordered, we need to implement more strict ordering!
     #
-    def __init__(self, shard: StateShard, state: ScriptState):
+    def __init__(self, shard: Shard, state: ScriptStateManager):
         super(AfterRequestActions, self).__init__()
         # remember that Task supports a delay arg if we need it
         self.state = state
@@ -640,9 +747,9 @@ class Script(Logger):
     # todo: maybe switch to static approach like with scenes
     # We should also name scripts so we can have multiple scenarios we're testing and comparing.
     # That way we can save progress on a per-script basis
-    Active_Scripts = []
+    Active_Scripts: List['Script'] = []
 
-    def __init__(self, name, structure: dict, state_object: ScriptState, text_handlers: List[TextHandler] = None):
+    def __init__(self, name, structure: dict, state_object: ScriptStateManager, text_handlers: List[TextHandler] = None):
         super(Script, self).__init__()
         self.name = name
         # structure format:
@@ -654,7 +761,7 @@ class Script(Logger):
         self.structure: Dict[str, Dict[str, SceneAndState]] = structure
         # got to give it the key
         state_object.set_key(self.db_key)
-        self.state = state_object
+        self.state_manager = state_object
 
         if text_handlers is None:
             text_handlers = []
@@ -673,11 +780,19 @@ class Script(Logger):
     def db_key(self):
         return f'script:{self.name}'
 
+    def get_snapshot(self):
+        return self.state_manager._state_dict
+
     async def load_state(self):
-        await self.state.load_from_redis()
+        await self.state_manager.load_from_redis()
+        await self.state_manager.on_startup()
+
         for choices in self.structure.values():
             for scene_set in choices.values():
                 await scene_set.scene.load()
+
+    async def integrate_shard(self, shard: Shard):
+        await add_task.send(AfterRequestActions(shard, self.state_manager))
 
     # return true if player is going t
     async def player_playing(self, request: TwilRequest):
@@ -702,49 +817,37 @@ class Script(Logger):
         self.d(f"Can {request} start a new game? -> {scene_state is not None}")
         return scene_state is not None
 
-    async def process_text(self, request: TwilRequest):
+    async def process_text(self, request: TwilRequest, snapshot):
         self.d(f'process_text({request})')
 
-        if not request.is_text:
-            self.w(f'Request {request} is not a text! Aborting!')
+        try:
+            if not request.is_text:
+                self.w(f'Request {request} is not a text! Aborting!')
+                return
+
+            script_info: ScriptInfo = request.player.script(self.name)
+
+            if script_info is None or script_info.is_complete:
+                self.d(f'Player {request.player} is not on our script, returning!')
+                return
+
+            for handler in self.text_handlers:
+                shard: StateShard = self.state_manager.shard
+
+                script_info = await handler.new_text(request, shard, script_info)
+
             return
+        except Exception as e:
+            await self._handle_exception(request, e, snapshot)
 
-        script_info: ScriptInfo = request.player.script(self.name)
-
-        if script_info is None or script_info.is_complete:
-            self.d(f'Player {request.player} is not on our script, returning!')
-            return
-
-        # scene_state: SceneAndState = self._get_scene_state(script_info, request.num_called)
-        # scene_info = scene_state.scene._get_state(script_info)
-
-        for handler in self.text_handlers:
-            shard: StateShard = self.state.shard
-            # text_state: dict = script_info.text_handler_states.get(handler.Name)
-
-            # context = RoomContext(request.player, shard, script_info
-
-            script_info = await handler.new_text(request, shard, script_info)
-
-            # script_info, scene_info, text_state = context._pass_back_changes(
-            #     script_info,
-            #     scene_info,
-            #     text_state,
-            #     spoil_state=True  # the room state stops being fresh now
-            # )
-
-            # script_info.text_handler_states[handler.Name] = text_state
-
-        return
-
-    async def play(self, request: TwilRequest):
+    async def play(self, request: TwilRequest, snapshot):
         self.d(f'play({request})')
 
         # note: some sloppy planning has resulted in confusing naming. There is the script state [for the player],
         # which we frequently call the script state, and then there is the script state [for the script] that is
         # shared and used by all players going through a script
         script_info: ScriptInfo = request.player.script(self.name)
-        shard: StateShard = self.state.shard
+        shard: StateShard = self.state_manager.shard
 
         if script_info is None or script_info.is_complete:
             self.d(f'play({request}): Previous script completed or we need a new one.')
@@ -766,8 +869,8 @@ class Script(Logger):
         try:
             result = await scene.play(shard, request, script_info)
 
+            await self.integrate_shard(shard)
             # apply changes
-            await add_task.send(AfterRequestActions(shard, self.state))
 
             if scene.done(script_info):
                 if scene_state.next_state == Script_Ignore_Change:
@@ -779,11 +882,16 @@ class Script(Logger):
 
             request.player.set_script(self.name, script_info)  # should not be needed
         except Exception as e:
-            self.e(f'Got exception from scene.play: {e}: {traceback.extract_tb(e.__traceback__).format()}')
-            self.e(f'Returning generic confused response.')
-            await error_sms(f'Player {request.player} in Scene {self} encountered an exception: {e}')
+            await self._handle_exception(request, e, snapshot)
 
         return result
+
+    async def _handle_exception(self, request, exception: Exception, snapshot):
+        self.e(f'Got exception from scene.play: {exception}: {traceback.extract_tb(exception.__traceback__).format()}')
+        self.e(f'Returning generic confused response.')
+        # save snap to restore state
+        snapshot.save()
+        await error_sms(f'Player {request.player} in Scene {self} encountered an exception: {exception}')
 
     def _get_scene_state(self, info: ScriptInfo, number_called: PhoneNumber) -> Optional[SceneAndState]:
         self.d(f'_get_scene_set(info, {number_called.e164})')

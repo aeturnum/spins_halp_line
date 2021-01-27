@@ -131,7 +131,8 @@ class ScriptInfo:
 class Player(Logger):
 
     _info = 'info'
-    scripts_key = 'scripts'
+    _scripts_key = 'scripts'
+    _generation_key = 'generation'
 
     @classmethod
     async def _get_player_keys(cls, db = None) -> List[str]:
@@ -182,6 +183,7 @@ class Player(Logger):
         super(Player, self).__init__()
         global _redis
         self.number = PhoneNumber(number)
+        self._generation = 0
         self._db = new_redis()
         self._data = {}
         # self.info: Optional[PlayerInfo] = None
@@ -191,18 +193,46 @@ class Player(Logger):
     # connection stuff
 
     async def load(self):
-        jsn = await self._db.get(self._key)
+        jsn = await self._db.get(self.key)
         if not jsn:
             jsn = "{}"
         self._data = json.loads(jsn)
+        await self.load_state_from_dict(self._data)
+
+    async def load_state_from_dict(self, data):
+        self._generation = data.get(self._generation_key, 0)
+        # deletes the generation key without raising an error if it doesn't exist
+        # https://stackoverflow.com/questions/11277432/how-can-i-remove-a-key-from-a-python-dictionary
+        # !POP RETURN VALUE INTENTIONALLY IGNORED!
+        data.pop(self._generation_key, None)
+
         # self.info = self._load_info(self._data)
-        self.scripts = self._load_scripts(self._data)
-        self.d(f"loaded scripts: {self.scripts}")
+        self.scripts = self._load_scripts(data)
+
+        self._data = data
         self._loaded = True
+
+    async def advance_generation_to(self, state_data):
+        # increase our generation and overwrite the current object in redis, making sure our data survives until
+        # we start a request with that generation
+        # get latest
+
+        # make backup
+        await self.load()
+        # copy the latest generation
+        backup_gen = self._generation
+        await self.load_state_from_dict(state_data)
+        self._generation = backup_gen + 1
+
+        # replace whatever was in the db with the state we got passed
+        await self.save()
+
+    def get_snapshot(self):
+        return self.data
 
     @classmethod
     def _load_scripts(cls, data: dict):
-        scripts = data.get(cls.scripts_key, {})
+        scripts = data.get(cls._scripts_key, {})
         return {
             script: ScriptInfo.from_dict(info) for script, info in scripts.items()
         }
@@ -214,12 +244,20 @@ class Player(Logger):
     #     )
 
     @property
-    def _key(self):
+    def key(self):
         return f'plr:{self.number.e164}'
 
     async def save(self):
         # always save damnit
-        await self._db.set(self._key, json.dumps(self.data))
+        jsn = await self._db.get(self.key)
+        if jsn:
+            data = json.loads(jsn)
+            db_generation = data.get(self._generation_key, 0)
+            if db_generation > self._generation:
+                # Do not overwrite
+                return
+
+        await self._db.set(self.key, json.dumps(self.data))
 
     def ensure_loaded(self):
         if not self._loaded:
@@ -228,8 +266,8 @@ class Player(Logger):
     @property
     def data(self):
         return {
-            # 'info': asdict(self.info),
-            self.scripts_key: {k: asdict(v) for k, v in self.scripts.items()}
+            self._generation_key: self._generation,
+            self._scripts_key: {k: asdict(v) for k, v in self.scripts.items()}
         }
 
     def set_script(self, script_name: str, info: ScriptInfo) -> None:

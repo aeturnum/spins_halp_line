@@ -151,7 +151,7 @@ async def test_scene():
     # import pudb.b
     result = await s.play(req)
     assert result == expected
-    assert player.scripts[s.name].state == Script_End_State
+    assert player.scripts[s.name].state_manager == Script_End_State
 
 
 async def test_maze():
@@ -165,23 +165,23 @@ async def test_maze():
     # import pudb.b
     result = await s.play(req)
     assert result == 1
-    assert player.scripts[s.name].state != Script_End_State
+    assert player.scripts[s.name].state_manager != Script_End_State
 
     req = MockRequest.make(player, "+15556667777", digits="1")
     result = await s.play(req)
     # check that we went to room two
     assert result == 2
-    assert player.scripts[s.name].state != Script_End_State
+    assert player.scripts[s.name].state_manager != Script_End_State
     result = await s.play(req)
     # back to room one
     assert result == 1
-    assert player.scripts[s.name].state != Script_End_State
+    assert player.scripts[s.name].state_manager != Script_End_State
     req = MockRequest.make(player, "+15556667777", digits="6")
     result = await s.play(req)
     # to final room
     assert result == 3
     # make sure that we detect that no more moves are possible
-    assert player.scripts[s.name].state == Script_End_State
+    assert player.scripts[s.name].state_manager == Script_End_State
 
 
 async def test_two_rooms():
@@ -200,7 +200,7 @@ async def test_two_rooms():
     assert result == expected1
     result = await s.play(req)
     assert result == expected2
-    assert player.scripts[s.name].state == Script_End_State
+    assert player.scripts[s.name].state_manager == Script_End_State
 
 async def test_state():
     s = one_room("")

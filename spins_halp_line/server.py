@@ -38,6 +38,7 @@ from spins_halp_line.actions.conferences import (
     conferences,
     load_conferences
 )
+from spins_halp_line.debug import Snapshot
 
 Script.add_script(telemarketopia)
 
@@ -104,14 +105,16 @@ async def main_number():
     # todo: improve this system
     for script in Script.Active_Scripts:
         if await script.player_playing(req):
-            response = await script.play(req)
+            ss = Snapshot(script, req.player)
+            response = await script.play(req, ss)
             break
 
     # start a new game
     if not response:
         for script in Script.Active_Scripts:
             if await script.call_could_start_game(req):
-                response = await script.play(req)
+                ss = Snapshot(script, req.player)
+                response = await script.play(req, ss)
                 break
 
     if not response:
@@ -129,7 +132,8 @@ async def handle_text():
 
     for script in Script.Active_Scripts:
         if await script.player_playing(req):
-            await script.process_text(req)
+            ss = Snapshot(script, req.player)
+            await script.process_text(req, ss)
             break
 
     return t_resp("")
@@ -231,8 +235,6 @@ async def conf_status_update(c_number):
     # just 200-ok them
     return ""
 
-
-
 #
 #  _____       _                       _               ______           _             _       _
 # |  __ \     | |                     (_)             |  ____|         | |           (_)     | |
@@ -244,17 +246,17 @@ async def conf_status_update(c_number):
 #                          |___/ |___/         |___/                     |_|
 @app.route("/debug/conf", methods=["POST"])
 async def debug_conf_call():
-    from spins_halp_line.media.common import Shazbot, Look_At_You_Hacker
     req = TwilRequest(request)
     await req.load()
 
     num1 = PhoneNumber(req.data['num1'])
     num2 = PhoneNumber(req.data['num2'])
-    from_num = Global_Number_Library.random()
 
-    conf = await new_conference(from_num)
-    await conf.add_participant(num1, play_first=Look_At_You_Hacker)
-    await conf.add_participant(num2, play_first=Shazbot)
+    from spins_halp_line.stories.telemarketopia_conferences import ConfStartFirst, StoryInfo
+
+    await add_task.send(
+        ConfStartFirst(StoryInfo(num1.e164, num2.e164, telemarketopia.state_manager.shard))
+    )
 
     return ""
 
@@ -287,6 +289,15 @@ async def list_players():
 @app.route("/debug/players/<p_num>", methods=['DELETE'])
 async def delete_player(p_num):
     return str(await Player.reset(Player.from_number(p_num)))
+
+@app.route("/debug/snapshot/<snap_num>", methods=['POST'])
+async def load_snapshot(snap_num):
+    snap = Snapshot.get_snapshot(snap_num)
+    if snap:
+        await snap.restore()
+
+    return ""
+
 #   _____ _ _     ______           _             _       _
 #  / ____(_) |   |  ____|         | |           (_)     | |
 # | |  __ _| |_  | |__   _ __   __| |_ __   ___  _ _ __ | |_ ___

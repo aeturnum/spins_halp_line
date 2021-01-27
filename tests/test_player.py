@@ -8,13 +8,13 @@ async def test_player_object():
     snap = Snapshot(si)
     test_value = "test"
 
-    old_value = si.state # probably None
-    si.state = test_value
+    old_value = si.state_manager # probably None
+    si.state_manager = test_value
 
 
-    assert si.state == test_value
+    assert si.state_manager == test_value
     snap.restore()
-    assert si.state == old_value
+    assert si.state_manager == old_value
 
 async def test_phone_number():
     p1 = PhoneNumber("4156864014")

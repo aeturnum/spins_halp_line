@@ -6,12 +6,11 @@ from twilio.base import values
 
 from ..constants import Credentials
 from spins_halp_line.util import LockManager
-from ..resources.numbers import PhoneNumber
+from spins_halp_line.tasks import add_task, Task
+from ..resources.numbers import PhoneNumber, Global_Number_Library
 
 _twilio_client: rest.Client = rest.Client(Credentials["twilio"]["sid"], Credentials["twilio"]["token"])
 _twil_lock = trio.Lock()
-
-
 
 
 
@@ -86,3 +85,31 @@ async def send_sms(
                 message,
                 media_url
             )
+
+
+
+class TextTask(Task):
+    Text = ""
+    From_Number_Label = None
+    Image = values.unset
+
+    def __init__(self, to: PhoneNumber, delay=0):
+        super(TextTask, self).__init__(delay)
+        self.to = to
+
+    async def execute(self):
+        image = self.Image
+        if self.Image != values.unset:
+            await self.Image.load()
+            image = self.Image.url
+
+        from_num = Global_Number_Library.from_label(self.From_Number_Label)
+        await send_sms(
+            from_num,
+            self.to,
+            self.Text,
+            image
+        )
+
+async def send_text(TextClass, player_numer: PhoneNumber, delay=0):
+    await add_task.send(TextClass(player_numer, delay))

@@ -2,7 +2,7 @@ from typing import Dict
 
 from twilio.twiml.voice_response import VoiceResponse
 
-from .story_objects import Room, Scene, Script, SceneAndState, RoomContext, ScriptState
+from .story_objects import Room, Scene, Script, SceneAndState, RoomContext, ScriptStateManager
 from spins_halp_line.constants import (
     Script_New_State,
     Script_Any_Number,
@@ -359,5 +359,5 @@ adventure = Script(
             Script_Any_Number: SceneAndState(ShipwreckScene(), Script_End_State)
         }
     },
-    ScriptState({})
+    ScriptStateManager()
 )
