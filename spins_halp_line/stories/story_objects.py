@@ -601,7 +601,9 @@ class ScriptStateManager(Logger):
         d = self._state_dict
         d.pop('version', None)  # remove version
         d.pop('generation', None)  # remove version
-        return StateShard(**d)
+        ss = StateShard(**d)
+        ss.set_parent(self)
+        return ss
 
     def set_key(self, key):
         self._key = key

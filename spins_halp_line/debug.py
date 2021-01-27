@@ -36,17 +36,20 @@ class Snapshot(Logger):
         super(Snapshot, self).__init__()
         self.script_name: Optional[str] = None
         self.script_snap = None
-        self.player: Dict[str, dict] = {}
+        self.players: Dict[str, dict] = {}
         self.index = str(self._num)
         self._num += 1
 
         self._from_objects(script, players)
 
-    def _from_objects(self, script: Optional[Script], players: Optional[List[Player]]):
+    def _from_objects(self, script: Optional[Script], players: Optional[Union[List[Player], Player]]):
         if script:
             self.script_name = script.name
             self.script_snap = script.get_snapshot()
         if players:
+            if not isinstance(players, list):
+                players = [players]
+
             self.players = {
                 p.key: p.get_snapshot() for p in players
             }
