@@ -305,6 +305,16 @@ async def load_snapshot(snap_num):
 
     return ""
 
+@app.route("/debug/snapshot", methods=['POST'])
+async def load_snapshot_from_body():
+    req = TwilRequest(request)
+    await req.load()
+    snap = Snapshot.from_json(req.data.get('snapshot'))
+    if snap:
+        await snap.restore()
+
+    return ""
+
 #   _____ _ _     ______           _             _       _
 #  / ____(_) |   |  ____|         | |           (_)     | |
 # | |  __ _| |_  | |__   _ __   __| |_ __   ___  _ _ __ | |_ ___

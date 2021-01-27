@@ -598,7 +598,10 @@ class ScriptStateManager(Logger):
         return ScriptState(**base)
 
     def _make_shard(self) -> StateShard:
-        return StateShard(**self._state_dict)
+        d = self._state_dict
+        d.pop('version', None)  # remove version
+        d.pop('generation', None)  # remove version
+        return StateShard(**d)
 
     def set_key(self, key):
         self._key = key

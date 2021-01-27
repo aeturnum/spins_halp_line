@@ -150,7 +150,10 @@ class TeleStateManager(ScriptStateManager):
         return TeleState(**base)
 
     def _make_shard(self) -> TeleShard:
-        return TeleShard(**self._state_dict)
+        d = self._state_dict
+        d.pop('version', None) # remove version
+        d.pop('generation', None)  # remove version
+        return TeleShard(**d)
 
     def filter_list(self, player_list: List, player_set: Set):
         return [p for p in player_list if p in player_set]
