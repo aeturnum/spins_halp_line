@@ -65,6 +65,10 @@ class Change:
             setattr(target, self.From, frm)
 
         if isinstance(to, list):
+            # todo: figure out if we want this
+            # if self.Value in to:
+            #     # no dupes!
+            #     to.remove(self.Value)
             to.extend(self.Value)
         else:
             print(f'Target value is {type(to)}, only lists supported')

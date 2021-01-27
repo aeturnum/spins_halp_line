@@ -11,7 +11,7 @@ from spins_halp_line.constants import Root_Url, Credentials
 from spins_halp_line.media.common import Conference_Nudge, Clavae_Conference_Intro, Karen_Conference_Info
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.stories.tele_constants import (
-    _got_text, _in_final_final,
+    _ready_for_conf, _in_final_final,
     ConfUnReadyIfReply, ConfUnReadyIfNoReply, ConfReady,
     CFinalPuzzle1, KFinalPuzzle1, CFinalPuzzle2, KFinalPuzzle2
 )
@@ -77,8 +77,8 @@ class ConferenceTask(Task):
         # cheeck to make sure we've seen them within last 5
         delta = timedelta(minutes=5)
 
-        clavae_ready = self.info.clv_p.check_timestamp(_got_text, delta)
-        karen_ready = self.info.kar_p.check_timestamp(_got_text, delta)
+        clavae_ready = self.info.clv_p.check_timestamp(_ready_for_conf, delta)
+        karen_ready = self.info.kar_p.check_timestamp(_ready_for_conf, delta)
 
         self.d(f'check_player_status({self.info}) -> {clavae_ready}, {karen_ready}')
         return clavae_ready, karen_ready

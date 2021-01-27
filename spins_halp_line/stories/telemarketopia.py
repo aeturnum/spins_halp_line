@@ -50,7 +50,7 @@ class ConferenceChecker(TextHandler):
     async def first_conf_text(self, text_request: TwilRequest, shard: TeleShard, script_info: ScriptInfo):
         self.d(f'new_text({text_request.caller}) - player is agreeing to conf?')
         # only set if they are not yet in their first conference
-        script_info.data[_ready_for_conf] = datetime.now().isoformat()
+        TelePlayer.record_timestamp(script_info.data, _ready_for_conf)
         return script_info
 
     async def first_conf_choice(self, text_request: TwilRequest, shard: TeleShard, script_info: ScriptInfo):

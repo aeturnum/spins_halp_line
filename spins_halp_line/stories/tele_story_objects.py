@@ -135,9 +135,10 @@ class TelePlayer(Player):
         # print(f'Telemarketopia accessor: {self.scripts}')
         return getattr(self.scripts.get(Telemarketopia_Name, {}), 'data', {})
 
-    def record_timestamp(self, name: str):
-        self.telemarketopia[name] = datetime.now().isoformat()
-        self.d(f'record_timestamp(name:{name}) -> {self.telemarketopia}')
+    @classmethod
+    def record_timestamp(cls, data: dict, name: str):
+        data[name] = datetime.now().isoformat()
+        print(f'record_timestamp(name:{name}) -> {data}')
 
     def check_timestamp(self, name: str, within: timedelta):
         self.d(f'check_timestamp(name:{name}, within:{timedelta}): {self.telemarketopia}')

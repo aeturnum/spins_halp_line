@@ -123,7 +123,7 @@ Path_Clavae = 'Clavae'
 Path_Karen = 'Karen'
 
 
-_got_text = 'got_text'
+# _got_text = 'got_text'
 _ready_for_conf = 'pickk'
 _player_in_first_conference = 'player_in_first_conference'
 _has_decision_text = 'player_has_decision_text'
