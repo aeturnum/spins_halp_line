@@ -132,6 +132,8 @@ async def handle_text():
         if await script.player_playing(req):
             ss = Snapshot(script, req.player)
             await script.process_text(req, ss)
+            # whoops lol need to save the player
+            await req.player.save()
             break
 
     return t_resp("")
