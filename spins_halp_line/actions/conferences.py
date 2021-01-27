@@ -201,7 +201,7 @@ class TwilConference(Logger):
         # todo: figure out this whole async machine detection buisness
         async with LockManager(_twil_lock):
             _twilio_client.calls.create(
-                machine_detection='Enable',
+                # machine_detection='Enable',
                 # async_amd='true',
                 # async_amd_status_callback='',
                 url=self.twiml_callback,
@@ -238,6 +238,7 @@ class TwilConference(Logger):
                 await self._save_conference_list(True)
 
         dial = Dial()
+        self.d(f'Returning conference xml. Hold music url: {Conference_Hold_Music.url}')
         dial.conference(
             f'{self.id}',
             status_callback_event=self._callbacks,

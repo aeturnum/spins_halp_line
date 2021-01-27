@@ -100,7 +100,8 @@ class ConferenceTask(Task):
         self.d(f"ConfWaitForPlayers({self.info}): Starting conference")
         await self.conference.add_participant(
             self.info.c_num,
-            play_first=clav_media
+            play_first=clav_media,
+
         )
 
         await self.conference.add_participant(
