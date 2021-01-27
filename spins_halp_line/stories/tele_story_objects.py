@@ -133,7 +133,7 @@ class TelePlayer(Player):
     @property
     def telemarketopia(self) -> Optional[dict]:
         # print(f'Telemarketopia accessor: {self.scripts}')
-        return self.scripts.get(Telemarketopia_Name, {}).get('data', {})
+        return getattr(self.scripts.get(Telemarketopia_Name, {}), 'data', {})
 
     def record_timestamp(self, name: str):
         self.telemarketopia[name] = datetime.now().isoformat()

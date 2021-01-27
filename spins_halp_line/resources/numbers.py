@@ -39,6 +39,9 @@ class PhoneNumber:
 
         return False
 
+    def toJson(self):
+        return self.e164
+
     # Used for twilio purposes
     @property
     def e164(self):

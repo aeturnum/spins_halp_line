@@ -247,8 +247,9 @@ async def debug_conf_call():
     req = TwilRequest(request)
     await req.load()
 
-    num1 = PhoneNumber(req.data['num1'])
-    num2 = PhoneNumber(req.data['num2'])
+    # normalize format
+    num1: str = PhoneNumber(req.data['num1']).e164
+    num2: str = PhoneNumber(req.data['num2']).e164
 
     from spins_halp_line.stories.telemarketopia_conferences import ConfStartFirst, StoryInfo
 
@@ -262,7 +263,7 @@ async def debug_conf_call():
 
     # start process
     await add_task.send(
-        ConfStartFirst(StoryInfo(num1.e164, num2.e164, telemarketopia.state_manager.shard))
+        ConfStartFirst(StoryInfo(num1, num2, telemarketopia.state_manager.shard))
     )
 
     return ""
