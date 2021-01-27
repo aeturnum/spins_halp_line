@@ -135,6 +135,14 @@ class TelePlayer(Player):
         # print(f'Telemarketopia accessor: {self.scripts}')
         return getattr(self.scripts.get(Telemarketopia_Name, {}), 'data', {})
 
+    def clear(self, keys: Union[List[str], str]):
+        if not isinstance(keys, list):
+            keys = [keys]
+        for k in keys:
+            self.telemarketopia.pop(k, None)
+
+        await self.save()
+
     @classmethod
     def record_timestamp(cls, data: dict, name: str):
         data[name] = datetime.now().isoformat()

@@ -690,6 +690,11 @@ class ScriptStateManager(Logger):
         async with LockManager(self._lock, already_locked=locked):
             db_data = await db.get(self._key).autodecode
             if isinstance(db_data, dict):
+                self.d('Save_to_redis...')
+                self.d(f'Save_to_redis: {self._state}')
+                self.d(f'Save_to_redis: {self._state_dict}')
+                self.d(f'Save_to_redis: {db_data}')
+                self.d(f'Save_to_redis: self._state_dict == db_data ={self._state_dict == db_data}')
                 if self._state_dict == db_data:
                     self.d(f'save_to_redis: no changes from version in database')
                     # there are no changes to save, no need to increase the verson

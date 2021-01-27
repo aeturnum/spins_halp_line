@@ -48,6 +48,10 @@ class StoryInfo:
             await self.kar_p.load()
             self._loaded = True
 
+    async def save(self):
+        await self.clv_p.save()
+        await self.kar_p.save()
+
     @property
     def c_num(self) -> PhoneNumber:
         return self.clv_p.number
@@ -136,6 +140,10 @@ class ReturnPlayers(ConferenceTask):
             self.info.k_num.e164,
             to_front=k_r)
 
+        # remove info the players got the text
+        del self.info.clv_p.telemarketopia[_ready_for_conf]
+        del self.info.kar_p.telemarketopia[_ready_for_conf]
+
         self.d(f'ReturnPlayers({self.info}): sending texts')
         # Text player to let them know the conference is off
         await self.unready_text(c_r, self.info.c_num)
@@ -214,11 +222,18 @@ class ConfStartFirst(ConferenceTask):
     async def execute_conference_action(self):
         self.d(f"ConfStartFirst({self.info})")
 
+        # remove info the players got the text
+        # clear
+        self.info.clv_p.clear([_ready_for_conf, _in_final_final])
+        self.info.kar_p.clear([_ready_for_conf, _in_final_final])
+
+        self.d(f"ConfStartFirst({self.info}): cleared old flags")
         await send_text(ConfReady, self.info.c_num)
         await send_text(ConfReady, self.info.k_num)
 
+        self.d(f"ConfStartFirst({self.info}): Sent text")
         # wait 30s
-        wait_task = ConfWaitForPlayers(self.info, 30)
+        wait_task = ConfWaitForPlayers(self.info, delay=30)
         await self.start_child_task(wait_task)
 
 
