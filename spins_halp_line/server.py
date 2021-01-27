@@ -26,15 +26,13 @@ from spins_halp_line.stories.story_objects import (
 from spins_halp_line.media.common import (
     End_A, End_B, End_C, End_D, End_E, End_F, End_G, End_H, End_I, End_J
 )
-from spins_halp_line.stories.shipwreck_adventure import adventure
 from spins_halp_line.stories.telemarketopia import telemarketopia
+from spins_halp_line.stories.tele_story_objects import TeleShard
 from spins_halp_line.events import event_websocket, send_event
 from spins_halp_line.player import Player
 from spins_halp_line.actions.conferences import (
     Conf_Twiml_Path,
     Conf_Status_Path,
-    TwilConference,
-    new_conference,
     conferences,
     load_conferences
 )
@@ -254,6 +252,15 @@ async def debug_conf_call():
 
     from spins_halp_line.stories.telemarketopia_conferences import ConfStartFirst, StoryInfo
 
+    # update shared state
+    shard: TeleShard = telemarketopia.state_manager.shard
+    shard.append('clavae_in_conf', num1)
+    shard.append('clavae_players', num1)
+    shard.append('karen_in_conf', num2)
+    shard.append('karen_players', num2)
+    await telemarketopia.integrate_shard(shard)
+
+    # start process
     await add_task.send(
         ConfStartFirst(StoryInfo(num1.e164, num2.e164, telemarketopia.state_manager.shard))
     )
