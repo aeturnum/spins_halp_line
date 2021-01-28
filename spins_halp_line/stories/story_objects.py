@@ -819,16 +819,20 @@ class Script(Logger):
         await add_task.send(AfterRequestActions(shard, self.state_manager))
 
     # return true if player is going t
-    async def player_playing(self, request: TwilRequest):
+    async def request_from_player(self, request: TwilRequest):
 
         await request.load()  # load player
+
+        return await self.player_is_playing(request.player)
+
+    async def player_is_playing(self, player: Player):
         playing = False
 
-        script_info = request.player.script(self.name)
+        script_info = player.script(self.name)
         if script_info:
             playing = not script_info.is_complete
 
-        self.d(f"Is {request} playing? -> {playing}")
+        self.d(f"Is {player} playing? -> {playing}")
         return playing
 
     async def call_could_start_game(self, request: TwilRequest):
@@ -864,6 +868,14 @@ class Script(Logger):
         except Exception as e:
             await self._handle_exception(request, e, snapshot)
 
+    async def start_game_for_player(self, player):
+        if not await self.player_is_playing(player):
+            self.d(f'start_game_for_player({player}): Previous script completed or we need a new one.')
+            script_info = ScriptInfo()  # fresh!
+            player.set_script(self.name, script_info)
+
+            return script_info
+
     async def play(self, request: TwilRequest, snapshot):
         self.d(f'play({request})')
 
@@ -873,10 +885,8 @@ class Script(Logger):
         script_info: ScriptInfo = request.player.script(self.name)
         shard: StateShard = self.state_manager.shard
 
-        if script_info is None or script_info.is_complete:
-            self.d(f'play({request}): Previous script completed or we need a new one.')
-            script_info = ScriptInfo()  # fresh!
-            request.player.set_script(self.name, script_info)
+        if not self.player_is_playing(request.player):
+            script_info = await self.start_game_for_player(request.player)
 
         self.d(f'play({request}) - {script_info}')
 

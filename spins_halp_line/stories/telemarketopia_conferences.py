@@ -207,7 +207,7 @@ class ConfWaitForPlayers(ConferenceTask):
         await self.maybe_send_text(k_r, self.info.k_num)
 
         task_to_start = None
-        if not c_r and not k_r:
+        if not c_r or not k_r:
             self.d(f"ConfWaitForPlayers({self.info}): {c_r}, {k_r}: someone isn't ready after {self.state.time_elapsed}s!")
             if self.state.time_elapsed < self._wait_before_give_up:
                 # wait another 15 seconds and check again

@@ -102,7 +102,7 @@ async def main_number():
     # players already in a game
     # todo: improve this system
     for script in Script.Active_Scripts:
-        if await script.player_playing(req):
+        if await script.request_from_player(req):
             ss = Snapshot(script, req.player)
             response = await script.play(req, ss)
             break
@@ -129,7 +129,7 @@ async def handle_text():
     await req.load()
 
     for script in Script.Active_Scripts:
-        if await script.player_playing(req):
+        if await script.request_from_player(req):
             ss = Snapshot(script, req.player)
             await script.process_text(req, ss)
             # whoops lol need to save the player
@@ -263,15 +263,18 @@ async def debug_conf_call():
         shard.append('karen_players', num2)
 
 
-    # If this is debugging an already existing conference, they'll
-    if num1 in shard.clavae_waiting_for_conf and num2 in shard.karen_waiting_for_conf:
-        # we don't need to start manually, the reduce cycle will do it for us
-        await telemarketopia.integrate_shard(shard)
-    else:
+    for p in [Player(num1), Player(num2)]:
+        await p.load()
+        await telemarketopia.start_game_for_player(p)
+        await p.save()
 
+
+    # If this is debugging an already existing conference, they'll
+    if num1 not in shard.clavae_waiting_for_conf or num2 not in shard.karen_waiting_for_conf:
         shard.append('clavae_waiting_for_conf', num1)
         shard.append('karen_waiting_for_conf', num2)
-        await telemarketopia.integrate_shard(shard)
+
+    await telemarketopia.integrate_shard(shard)
 
 
         # # start process
