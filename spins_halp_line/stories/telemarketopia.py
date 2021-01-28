@@ -216,13 +216,15 @@ class TeleStateManager(ScriptStateManager):
             # find intersection
             shared_players = clav_uniques['set'].intersection(kare_uniques['set'])
             if shared_players:
+                self.d(f'shared: {shared_players}')
                 for shared_player in shared_players:
-                    side_that_loses = kare_uniques
-                    if len(clav_uniques['list']) > len(kare_uniques['list']):
-                        side_that_loses = clav_uniques
-
-                    side_that_loses['set'].remove(shared_player)
-                    side_that_loses['list'].remove(shared_player)
+                    # nuke it from orbit
+                    clav_uniques['set'].remove(shared_player)
+                    kare_uniques['set'].remove(shared_player)
+                    clav_uniques['list'].remove(shared_player)
+                    kare_uniques['list'].remove(shared_player)
+                    # also delete player state
+                    await TelePlayer.reset(shared_player)
 
             # now filter all lists
             state.clavae_players = clav_uniques['list']

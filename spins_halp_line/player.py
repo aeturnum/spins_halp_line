@@ -175,9 +175,11 @@ class Player(Logger):
         return result
 
     @classmethod
-    async def reset(cls, plr):
+    async def reset(cls, plr: Union[str, Player]):
         db = new_redis()
-        return await db.delete(plr)
+        if not isinstance(plr, Player):
+            plr = Player(plr)
+        return await db.delete(plr.key)
 
     @classmethod
     def from_number(cls, number: Union[int, str]) -> str:

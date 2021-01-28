@@ -77,14 +77,14 @@ class ConferenceTask(Task):
 
     async def check_player_status(self):
         await self.refresh_players()
-        self.d(f'check_player_status({self.info})')
+        # self.d(f'check_player_status({self.info})')
         # cheeck to make sure we've seen them within last 5
         delta = timedelta(minutes=5)
 
         clavae_ready = self.info.clv_p.check_timestamp(_ready_for_conf, delta)
         karen_ready = self.info.kar_p.check_timestamp(_ready_for_conf, delta)
 
-        self.d(f'check_player_status({self.info}) -> {clavae_ready}, {karen_ready}')
+        # self.d(f'check_player_status({self.info}) -> {clavae_ready}, {karen_ready}')
         return clavae_ready, karen_ready
 
     async def start_child_task(self, task):
