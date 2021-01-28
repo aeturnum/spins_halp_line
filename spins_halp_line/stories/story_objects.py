@@ -632,6 +632,9 @@ class ScriptStateManager(Logger):
 
             await self.save_to_redis(True)
 
+    async def integrate_shard(self, shard: Shard):
+        await add_task.send(AfterRequestActions(shard, self))
+
     # primaraly used for debugging to overwrite old versions
     async def set_new_generation(self):
         async with LockManager(self._lock):
