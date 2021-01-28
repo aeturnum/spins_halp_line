@@ -128,21 +128,23 @@ class ReturnPlayers(ConferenceTask):
         c_r, k_r = await self.check_player_status()
         # Put back into queue, but put them at the back of the queue if they didn't reply
         self.d(f'ReturnPlayers({self.info}): registering moves')
-        self.info.shard.move(
-            "clavae_in_conf",
-            "clavae_waiting_for_conf",
-            self.info.c_num.e164,
-            to_front=c_r)
+        if self.info.c_num.e164 in self.info.shard.clavae_in_conf:
+            self.info.shard.move(
+                "clavae_in_conf",
+                "clavae_waiting_for_conf",
+                self.info.c_num.e164,
+                to_front=c_r)
 
-        self.info.shard.move(
-            "karen_in_conf",
-            "karen_waiting_for_conf",
-            self.info.k_num.e164,
-            to_front=k_r)
+        if self.info.k_num.e164 in self.info.shard.karen_in_conf:
+            self.info.shard.move(
+                "karen_in_conf",
+                "karen_waiting_for_conf",
+                self.info.k_num.e164,
+                to_front=k_r)
 
         # remove info the players got the text
-        del self.info.clv_p.telemarketopia[_ready_for_conf]
-        del self.info.kar_p.telemarketopia[_ready_for_conf]
+        await self.info.clv_p.clear([_ready_for_conf, _in_final_final, _player_in_first_conference, _partner])
+        await self.info.kar_p.clear([_ready_for_conf, _in_final_final, _player_in_first_conference, _partner])
 
         self.d(f'ReturnPlayers({self.info}): sending texts')
         # Text player to let them know the conference is off

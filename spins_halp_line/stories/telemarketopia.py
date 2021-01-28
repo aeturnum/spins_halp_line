@@ -258,13 +258,14 @@ class TeleStateManager(ScriptStateManager):
             clav_p = state.clavae_waiting_for_conf.pop(0)
             karen_p = state.karen_waiting_for_conf.pop(0)
             self.d(f'Starting conf with {[clav_p, karen_p]}')
+            state.clavae_in_conf.append(clav_p)
+            state.karen_in_conf.append(karen_p)
+
             await add_task.send(
                 ConfStartFirst(
                     StoryInfo(clav_p, karen_p, shard)
                 )
             )
-            state.clavae_in_conf.append(clav_p)
-            state.karen_in_conf.append(karen_p)
 
         return state
 

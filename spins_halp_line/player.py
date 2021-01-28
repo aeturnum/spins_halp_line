@@ -74,6 +74,10 @@ class SceneInfo:
         return f'SceneInfo[{self.name}]{self.prev_room}]{self.room_queue}>'
 
 
+# todo: Add some event-specific dictionary for dealing with particular events
+# todo: First, should make managing events easser - new event, new dict
+# todo: Second, should help with housekeeping from multiple places
+
 @dataclass
 class ScriptInfo:
     state: str = Script_New_State
