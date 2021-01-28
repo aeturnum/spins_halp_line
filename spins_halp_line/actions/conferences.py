@@ -130,6 +130,9 @@ class TwilConference(Logger):
             'intros': json.dumps(self.intros)
         }
 
+    def __str__(self):
+        return f'Conf[{self.from_number}|{self.participants}]'
+
 
 # Headers:
 #   [...]

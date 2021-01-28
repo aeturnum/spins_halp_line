@@ -116,6 +116,7 @@ class ConferenceEventHandler(Logger):
         await player.save()
 
     async def event(self, conference:TwilConference, event: str, participant: str):
+        self.d(f"Got coference event: {conference}:{event}!")
         # first conference
         if conference.from_number.e164 == Global_Number_Library.from_label('conference'):
             if event == 'conference-start':

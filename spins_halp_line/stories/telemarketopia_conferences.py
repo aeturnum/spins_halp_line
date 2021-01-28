@@ -159,7 +159,13 @@ class ReturnPlayers(ConferenceTask):
 class ConnectFirstConference(ConferenceTask):
     async def execute_conference_action(self):
         self.d(f"ConnectFirstConference({self.info}): Checking if players connected...")
-        await trio.sleep(30)
+        # todo: apparently twilio only sends the conference-join event after the user listens to the audio
+        # todo: and stays on the line, so this should adjust depending on the length of the
+        # todo: audio pre-roll we're using.
+
+        # todo: to be clear, this means that the player can pick up the call and we will *not*
+        # todo: get a notification until they have finished listening to the audio on that call.
+        await trio.sleep(60)
 
         if not self.conference.started:
             # todo: end conference through twilio conference interface here
