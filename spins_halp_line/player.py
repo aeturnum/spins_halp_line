@@ -175,7 +175,7 @@ class Player(Logger):
         return result
 
     @classmethod
-    async def reset(cls, plr: Union[str, Player]):
+    async def reset(cls, plr: Union[str, 'Player']):
         db = new_redis()
         if not isinstance(plr, Player):
             plr = Player(plr)
