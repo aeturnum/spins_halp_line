@@ -823,9 +823,9 @@ class Script(Logger):
 
         await request.load()  # load player
 
-        return await self.player_is_playing(request.player)
+        return self.player_is_playing(request.player)
 
-    async def player_is_playing(self, player: Player):
+    def player_is_playing(self, player: Player):
         playing = False
 
         script_info = player.script(self.name)
@@ -868,8 +868,8 @@ class Script(Logger):
         except Exception as e:
             await self._handle_exception(request, e, snapshot)
 
-    async def start_game_for_player(self, player):
-        if not await self.player_is_playing(player):
+    def start_game_for_player(self, player):
+        if not self.player_is_playing(player):
             self.d(f'start_game_for_player({player}): Previous script completed or we need a new one.')
             script_info = ScriptInfo()  # fresh!
             player.set_script(self.name, script_info)
