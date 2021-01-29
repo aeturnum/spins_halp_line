@@ -214,7 +214,7 @@ class Player(Logger):
 
         # self.info = self._load_info(self._data)
         self.scripts = self._load_scripts(data)
-        self.d(f'Loaded new scripts!')
+        self.d(f'Loaded: {self.scripts}')
 
         self._data = data
         self._loaded = True
@@ -262,9 +262,11 @@ class Player(Logger):
             db_generation = data.get(self._generation_key, 0)
             if db_generation > self._generation:
                 # Do not overwrite
+                self.d("save(): Aborting due to generaton")
                 return
 
         await self._db.set(self.key, json.dumps(self.data))
+        self.d(f"save(): {self.key} <- {json.dumps(self.data)}")
 
     def ensure_loaded(self):
         if not self._loaded:

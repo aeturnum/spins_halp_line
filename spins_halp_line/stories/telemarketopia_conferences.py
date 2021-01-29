@@ -12,7 +12,7 @@ from spins_halp_line.media.common import Conference_Nudge, Clavae_Conference_Int
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.stories.tele_constants import (
     _ready_for_conf, _in_final_final, _player_in_first_conference, _partner,
-    ConfUnReadyIfReply, ConfUnReadyIfNoReply, ConfReady,
+    ConfUnReadyIfReply, ConfUnReadyIfNoReply, ConfReady, ConfReadyTwo,
     CFinalPuzzle1, KFinalPuzzle1, CFinalPuzzle2, KFinalPuzzle2
 )
 from spins_halp_line.stories.tele_story_objects import TeleShard, TelePlayer
@@ -200,7 +200,7 @@ class ConfWaitForPlayers(ConferenceTask):
         text_count = self.state.text_counts[number.e164]
         if not ready and self.state.time_elapsed > self._wait_before_retext and text_count == 1:
             self.d(f'Re-texting player {number} as we have not heard from them yet...')
-            await send_text(ConfReady, number)
+            await send_text(ConfReadyTwo, number)
             self.state.text_counts[number.e164] += 1
 
     async def execute_conference_action(self):

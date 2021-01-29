@@ -48,6 +48,10 @@ class ConfReady(TextTask):
     From_Number_Label = 'conference'
     Image = Telemarketopia_Logo
 
+class ConfReadyTwo(TextTask):
+    Text = "Are you still there? Send me any text at all back to us if you're ready and, if you aren't ready now, we'll try again later."
+    From_Number_Label = 'conference'
+
 
 class ConfUnReadyIfReply(TextTask):
     Text = "Oh no, I'm sorry. It looks like the person we paired you up with was less enthusiastic than we expected. Give us some time to find someone else..."
