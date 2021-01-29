@@ -38,6 +38,13 @@ def our_create_logger(
         return None
 
 
+# todo: Maybe we want to write our own version of hypercorn.logging.Logger so we can
+# todo: control which access logs we log and which ones we don't
+# sample log from the hypercorn code:
+# await self.config.log.access(
+#         self.scope, {"status": status_code, "headers": []}, time() - self.start_time
+#     )
+
 def do_monkey_patches():
     # who needs config options with python
     hyplog._create_logger = our_create_logger

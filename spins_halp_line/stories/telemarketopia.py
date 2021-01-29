@@ -656,5 +656,3 @@ telemarketopia = Script(
     TeleStateManager(),
     text_handlers=[ConferenceChecker()]
 )
-
-telemarketopia.add_script(telemarketopia)

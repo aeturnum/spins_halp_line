@@ -127,6 +127,9 @@ class ReturnPlayers(ConferenceTask):
         self.d(f'ReturnPlayers({self.info})')
         c_r, k_r = await self.check_player_status()
         # Put back into queue, but put them at the back of the queue if they didn't reply
+        if self.conference:
+            await self.conference.stop()
+
         self.d(f'ReturnPlayers({self.info}): registering moves')
         if self.info.c_num.e164 in self.info.shard.clavae_in_conf:
             self.info.shard.move(

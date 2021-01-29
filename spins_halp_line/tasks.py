@@ -17,14 +17,18 @@ class Task(Logger):
     @staticmethod
     async def do_an_execute(task_object: 'Task', task_status=trio.TASK_STATUS_IGNORED):
         task_status.started()
+        task_object.d(f'Sleeping for {task_object.delay}s before starting')
         await trio.sleep(task_object.delay)
         try:
+            task_object.d(f'Starting....')
             await task_object.execute()
         except Exception as e:
             print(f"Task got exception: {e}")
             print("\n".join(traceback.extract_tb(e.__traceback__).format()))
             if task_object.re_raise_exceptions:
                 raise e
+
+        task_object.d(f'Finished!')
 
     @property
     def re_raise_exceptions(self):

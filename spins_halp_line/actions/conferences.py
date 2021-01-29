@@ -4,6 +4,7 @@ from typing import List, Optional, Dict
 
 import trio
 from twilio.twiml.voice_response import VoiceResponse, Dial, Play
+from twilio.rest.api.v2010.account.conference import ConferenceInstance
 
 from spins_halp_line.constants import Root_Url
 from spins_halp_line.media.common import Conference_Hold_Music
@@ -189,6 +190,14 @@ class TwilConference(Logger):
                 await self._save_conference_list(True)
 
         return ""
+
+    async def stop(self):
+        async with LockManager(_twil_lock):
+            if self.twil_sid:
+                self.d(f"stop(): Stopping {self.twil_sid}")
+                _twilio_client.conferences(self.twil_sid).update(status=ConferenceInstance.Status.COMPLETED)
+            else:
+                self.d("stop(): Have not gotten SID yet, can't stop")
 
     # Override this to do custom event handling
     async def do_handle_event(self, event, participant):
