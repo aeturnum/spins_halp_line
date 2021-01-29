@@ -78,8 +78,8 @@ class ConferenceTask(Task):
     async def check_player_status(self):
         await self.refresh_players()
         # self.d(f'check_player_status({self.info})')
-        # cheeck to make sure we've seen them within last 5
-        delta = timedelta(minutes=5)
+        # cheeck to make sure we've seen them within last 10 mins
+        delta = timedelta(minutes=10)
 
         clavae_ready = self.info.clv_p.check_timestamp(_ready_for_conf, delta)
         karen_ready = self.info.kar_p.check_timestamp(_ready_for_conf, delta)

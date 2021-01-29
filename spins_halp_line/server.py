@@ -265,7 +265,7 @@ async def debug_conf_call():
 
     for p in [Player(num1), Player(num2)]:
         await p.load()
-        telemarketopia.start_game_for_player(p)
+        await telemarketopia.start_game_for_player(p)
         await p.save()
 
 

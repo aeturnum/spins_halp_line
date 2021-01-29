@@ -186,6 +186,19 @@ class TeleState:
     clavae_final_conf: List[str] = field(default_factory=list)
     karen_final_conf: List[str] = field(default_factory=list)
 
+    @property
+    def all_lists(self):
+        return [
+            self.clavae_players,
+            self.karen_players,
+            self.clavae_waiting_for_conf,
+            self.karen_waiting_for_conf,
+            self.clavae_in_conf,
+            self.karen_in_conf,
+            self.clavae_final_conf,
+            self.karen_final_conf
+        ]
+
     def __str__(self):
         return f'TeleState: {json.dumps(asdict(self))}'
 

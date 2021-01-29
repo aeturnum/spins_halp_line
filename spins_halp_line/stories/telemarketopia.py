@@ -30,6 +30,7 @@ from .story_objects import (
 
 from spins_halp_line.util import Logger, LockManager
 from spins_halp_line.tasks import add_task
+from spins_halp_line.player import Player
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import (
     Puppet_Master
@@ -159,6 +160,10 @@ class TeleStateManager(ScriptStateManager):
 
         return ts
 
+    @property
+    def state(self) -> TeleState:
+        return self._state
+
     def filter_list(self, player_list: List, player_set: Set):
         result = []
         added = set()
@@ -272,6 +277,27 @@ class TeleStateManager(ScriptStateManager):
 
         return state
 
+    async def player_added(self, player: Player, script_info: ScriptInfo):
+        async with LockManager(self._lock):
+            self.d(f'Assigning a path to {player}')
+            state: TeleState = self._state
+            number_str = player.number.e164
+
+            # get rid of any stale references
+            for state_list in state.all_lists:
+                if number_str in state_list:
+                    state_list.remove(number_str)
+
+            path = None
+            if len(state.clavae_players) <= len(state.karen_players):
+                path = Path_Clavae
+                state.clavae_players.append(number_str)
+            else:
+                path = Path_Karen
+                state.karen_players.append(number_str)
+
+            # set path!
+            script_info.data[_path] = path
 
     def __str__(self):
         return f'TeleSM'
@@ -281,23 +307,23 @@ class TipLineStart(TeleRoom):
 
     async def get_audio_for_room(self, context: RoomContext):
         # we need to select a path
-        path = context.script.get(_path, None)
-        print(f'context shard in first room: {context.shard}')
-        if path is None:
-            shard: TeleShard = context.shard
-            print(f'context shard in first room: {context.shard}')
-            clavae_players = shard.clavae_players
-            karen_players = shard.karen_players
-
-            if len(clavae_players) <= len(karen_players):
-                path = Path_Clavae
-                shard.append('clavae_players', context.player.number.e164)
-            else:
-                path = Path_Karen
-                shard.append('karen_players', context.player.number.e164)
-
-            # set path!
-            context.script[_path] = path
+        # path = context.script.get(_path, None)
+        # print(f'context shard in first room: {context.shard}')
+        # if path is None:
+        #     shard: TeleShard = context.shard
+        #     print(f'context shard in first room: {context.shard}')
+        #     clavae_players = shard.clavae_players
+        #     karen_players = shard.karen_players
+        #
+        #     if len(clavae_players) <= len(karen_players):
+        #         path = Path_Clavae
+        #         shard.append('clavae_players', context.player.number.e164)
+        #     else:
+        #         path = Path_Karen
+        #         shard.append('karen_players', context.player.number.e164)
+        #
+        #     # set path!
+        #     context.script[_path] = path
 
         return await self.get_resource_for_path(context)
 

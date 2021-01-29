@@ -674,6 +674,9 @@ class ScriptStateManager(Logger):
     async def on_startup(self):
         pass
 
+    async def player_added(self, player: Player, script_info: ScriptInfo):
+        pass
+
     # This is used to check if our version is out of date
     async def sync_redis(self, locked=False):
         db = new_redis()
@@ -868,11 +871,13 @@ class Script(Logger):
         except Exception as e:
             await self._handle_exception(request, e, snapshot)
 
-    def start_game_for_player(self, player):
+    async def start_game_for_player(self, player):
         if not self.player_is_playing(player):
             self.d(f'start_game_for_player({player}): Previous script completed or we need a new one.')
             script_info = ScriptInfo()  # fresh!
             player.set_script(self.name, script_info)
+
+            await self.state_manager.player_added(player, script_info)
 
             return script_info
 
