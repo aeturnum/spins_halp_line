@@ -136,6 +136,7 @@ class TelePlayer(Player):
         return getattr(self.scripts.get(Telemarketopia_Name, {}), 'data', {})
 
     async def clear(self, keys: Union[List[str], str]):
+        self.d(f'clear({keys})')
         if not isinstance(keys, list):
             keys = [keys]
         for k in keys:
