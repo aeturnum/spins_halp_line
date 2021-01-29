@@ -577,6 +577,26 @@ class SceneAndState:
     next_state: str
 
 
+# todo: Probably, eventually, we want to re-write this whole system to be a single immutable data structure
+# todo: that we pass around everywhere and is updated by changes in other threads. We'd also want to add
+# todo: code to enforce players only existing in a single 'location' and a single 'stage'.
+# todo:
+# todo: We'd probably want to do this using a layer of classes. An item being tracked by the state will be
+# todo: called a Node in the text below (in our current system a Node would be a phone number string).
+# todo:
+# todo: The general class has 'Categories' and 'Stages':
+# todo: 	- A Category has a set of valid values. Each Node is associated with one of the valid values.
+# todo: 	  Each Node *must* be in each category exactly once.
+# todo: 	- A Stage is a 'place' for a Node to be. There can be any number of Stages, but each Node can
+# todo: 	  be in only one Stage at a time.
+# todo:
+# todo: Then we'd have a CategorizedStageState where Stages can have Categories - this would represent the
+# todo: path'd structure we have.
+# todo: 	- So Stages and Categories would be defined as before
+# todo: 	- But some (not all) Categories would apply to Nodes and Stages
+# todo: 	- So the 'Path' Category would apply to stages and we'd implicitly have duplicate stages for
+# todo: 	  each value of the 'Path' Category
+
 # script
 #   \- state <-save on request / loaded on load-> redis
 #   	\- shard <-things added-> code
@@ -605,8 +625,10 @@ class ScriptStateManager(Logger):
         # self._state.update(initial_state)
         self._lock = trio.Lock()
 
-    def _make_new_state(self, base: dict = {}) -> ScriptState:
-        return ScriptState(**base)
+    def _make_new_state(self, base: dict = None) -> ScriptState:
+        if base is None:
+            base = {}
+        return ScriptState()
 
     def _make_shard(self) -> StateShard:
         d = self._state_dict
@@ -704,11 +726,9 @@ class ScriptStateManager(Logger):
         async with LockManager(self._lock, already_locked=locked):
             db_data = await db.get(self._key).autodecode
             if isinstance(db_data, dict):
-                self.d('Save_to_redis...')
-                self.d(f'Save_to_redis:      state: {self._state}')
                 self.d(f'Save_to_redis: state_dict: {self._state_dict}')
                 self.d(f'Save_to_redis:    db_dict: {db_data}')
-                self.d(f'Save_to_redis: self._state_dict == db_data ={self._state_dict == db_data}')
+                self.d(f'Save_to_redis: state_dict == db_data ? {self._state_dict == db_data}')
                 if self._state_dict == db_data:
                     self.d(f'save_to_redis: no changes from version in database')
                     # there are no changes to save, no need to increase the verson
@@ -872,14 +892,13 @@ class Script(Logger):
             await self._handle_exception(request, e, snapshot)
 
     async def start_game_for_player(self, player):
-        if not self.player_is_playing(player):
-            self.d(f'start_game_for_player({player}): Previous script completed or we need a new one.')
-            script_info = ScriptInfo()  # fresh!
-            player.set_script(self.name, script_info)
+        self.d(f'start_game_for_player({player}): Previous script completed or we need a new one.')
+        script_info = ScriptInfo()  # fresh!
+        player.set_script(self.name, script_info)
 
-            await self.state_manager.player_added(player, script_info)
+        await self.state_manager.player_added(player, script_info)
 
-            return script_info
+        return script_info
 
     async def play(self, request: TwilRequest, snapshot):
         self.d(f'play({request})')

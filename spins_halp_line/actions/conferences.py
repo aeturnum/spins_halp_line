@@ -263,9 +263,6 @@ class TwilConference(Logger):
 
         return response
 
-    def __str__(self):
-        return f'Conf[{self.id}]'
-
 
 async def new_conference(number: PhoneNumber) -> TwilConference:
     # global _conferences

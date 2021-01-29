@@ -113,6 +113,9 @@ class ConferenceTask(Task):
             play_first=karen_media
         )
 
+    def __str__(self):
+        return f"{self.__class__.__name__}[{self.info}]"
+
 
 class ReturnPlayers(ConferenceTask):
 
@@ -124,13 +127,14 @@ class ReturnPlayers(ConferenceTask):
         await send_text(cls, number)
 
     async def execute_conference_action(self):
-        self.d(f'ReturnPlayers({self.info})')
+        self.d(f'e_c_a():')
         c_r, k_r = await self.check_player_status()
         # Put back into queue, but put them at the back of the queue if they didn't reply
+        self.d(f'{self.info}] Trying to stop Conf {self.conference}')
         if self.conference:
             await self.conference.stop()
 
-        self.d(f'ReturnPlayers({self.info}): registering moves')
+        self.d(f'e_c_a(): registering moves')
         if self.info.c_num.e164 in self.info.shard.clavae_in_conf:
             self.info.shard.move(
                 "clavae_in_conf",
@@ -149,30 +153,33 @@ class ReturnPlayers(ConferenceTask):
         await self.info.clv_p.clear([_ready_for_conf, _in_final_final, _player_in_first_conference, _partner])
         await self.info.kar_p.clear([_ready_for_conf, _in_final_final, _player_in_first_conference, _partner])
 
-        self.d(f'ReturnPlayers({self.info}): sending texts')
+        self.d(f'e_c_a(): sending texts')
         # Text player to let them know the conference is off
         await self.unready_text(c_r, self.info.c_num)
         await self.unready_text(k_r, self.info.k_num)
 
-        self.d(f'ReturnPlayers({self.info}): queueing update')
+        self.d(f'e_c_a(): queueing update')
         # Eventually put players back in queue
         await self.info.shard.queue_state_update()
 
 
 class ConnectFirstConference(ConferenceTask):
+    _sleep_time = 60 * 3
+
     async def execute_conference_action(self):
-        self.d(f"ConnectFirstConference({self.info}): Checking if players connected...")
+        self.d(f"e_c_a(): Sleeping for {self._sleep_time}s")
         # todo: apparently twilio only sends the conference-join event after the user listens to the audio
         # todo: and stays on the line, so this should adjust depending on the length of the
         # todo: audio pre-roll we're using.
 
         # todo: to be clear, this means that the player can pick up the call and we will *not*
         # todo: get a notification until they have finished listening to the audio on that call.
-        await trio.sleep(60)
+        await trio.sleep(self._sleep_time)
+        self.d(f"e_c_a(): Checking if players connected...")
 
         if not self.conference.started:
             # todo: end conference through twilio conference interface here
-            self.d(f"ConnectFirstConference({self.info}): Someone didn't pick up, returning")
+            self.d(f"e_c_a(): Someone didn't pick up, returning")
             return await add_task.send(ReturnPlayers(self.info))
 
         await trio.sleep(60 * 5)
@@ -204,22 +211,23 @@ class ConfWaitForPlayers(ConferenceTask):
             self.state.text_counts[number.e164] += 1
 
     async def execute_conference_action(self):
-        self.d(f"ConfWaitForPlayers({self.info})")
+        self.d(f"e_c_a():")
         c_r, k_r = await self.check_player_status()
         await self.maybe_send_text(c_r, self.info.c_num)
         await self.maybe_send_text(k_r, self.info.k_num)
 
         task_to_start = None
         if not c_r or not k_r:
-            self.d(f"ConfWaitForPlayers({self.info}): {c_r}, {k_r}: someone isn't ready after {self.state.time_elapsed}s!")
+            self.d(f"e_c_a(): {c_r}, {k_r}: someone isn't ready after {self.state.time_elapsed}s!")
             if self.state.time_elapsed < self._wait_before_give_up:
                 # wait another 15 seconds and check again
                 task_to_start = ConfWaitForPlayers(self.info, 15, self.state)
             else:
-                self.d(f"ConfWaitForPlayers({self.info}): Aborting both!")
+                self.d(f"e_c_a(): Aborting both!")
                 # put people back in the queue
                 task_to_start = ReturnPlayers(self.info)
         else:
+            self.d(f"e_c_a(): Starting conference!!")
             await self.start_conference(
                 clav_media=Clavae_Conference_Intro,
                 karen_media=Karen_Conference_Info

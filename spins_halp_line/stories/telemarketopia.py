@@ -117,7 +117,7 @@ class ConferenceEventHandler(Logger):
         await player.save()
 
     async def event(self, conference:TwilConference, event: str, participant: str):
-        self.d(f"Got coference event: {conference}:{event}!")
+        self.d(f"Got conference event: {conference}:{event}!")
         # first conference
         if conference.from_number.e164 == Global_Number_Library.from_label('conference'):
             if event == 'conference-start':
@@ -126,8 +126,10 @@ class ConferenceEventHandler(Logger):
                 p2 = conference.participants[1]
                 await self.save_state_for_start(p1, p2)
                 await self.save_state_for_start(p2, p1)
+                return True
 
             if event == 'conference-leave':
+                self.d(f"Player {participant} left the first conference!")
                 player_left = TelePlayer(participant)
                 await player_left.load()
                 player_left.telemarketopia[_has_decision_text] = True
@@ -137,6 +139,7 @@ class ConferenceEventHandler(Logger):
                     await send_text(KPostConfOptions, PhoneNumber(participant))
 
                 await player_left.save()
+                return True
 
         return False
 
@@ -278,6 +281,7 @@ class TeleStateManager(ScriptStateManager):
         return state
 
     async def player_added(self, player: Player, script_info: ScriptInfo):
+        self.d(f'player_added({player})')
         async with LockManager(self._lock):
             self.d(f'Assigning a path to {player}')
             state: TeleState = self._state
