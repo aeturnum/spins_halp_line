@@ -129,12 +129,9 @@ Path_Karen = 'Karen'
 
 # _got_text = 'got_text'
 _ready_for_conf = 'player_responded_to_conf_invite'
-_player_in_first_conference = 'player_in_first_conference'
-_has_decision_text = 'player_has_decision_text'
+
 _path = 'path'
-_partner = 'ending_partner'
-_player_final_choice = 'final_choice'
-_in_final_final = 'player_in_final_final'
+
 
 # state
 # _clavae_players = 'clave_players'

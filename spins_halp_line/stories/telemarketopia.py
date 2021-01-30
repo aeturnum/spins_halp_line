@@ -1,16 +1,10 @@
 from typing import Set, List
-from datetime import datetime
 
 from twilio.twiml.voice_response import VoiceResponse
 
 from .tele_constants import (
     Telemarketopia_Name,
-    _ready_for_conf,
-    _player_in_first_conference,
-    _has_decision_text,
-    _path,
-    _partner,
-    _player_final_choice,
+    _ready_for_conf, _path,
     Path_Clavae, Path_Karen,
     Clavae1, Clavae2,
     Karen1, Karen2,
@@ -48,44 +42,47 @@ from spins_halp_line.constants import (
 
 class ConferenceChecker(TextHandler):
 
-    async def first_conf_text(self, text_request: TwilRequest, shard: TeleShard, script_info: ScriptInfo):
+    async def first_conf_text(self, text_request: TwilRequest, caller: TelePlayer, script_info: ScriptInfo):
         self.d(f'new_text({text_request.caller}) - player is agreeing to conf?')
         # only set if they are not yet in their first conference
-        TelePlayer.record_timestamp(script_info.data, _ready_for_conf)
+        caller.timestamp(_ready_for_conf)
         return script_info
 
-    async def first_conf_choice(self, text_request: TwilRequest, shard: TeleShard, script_info: ScriptInfo):
+    async def first_conf_choice(self, text_request: TwilRequest, caller: TelePlayer, script_info: ScriptInfo):
         self.d(f'new_text({text_request.caller}, {text_request.text_body})')
-        script_info.data[_player_final_choice] = text_request.text_body.strip()
-        partner = TelePlayer(script_info.data[_partner])
+
+        caller.final_choice = text_request.text_body.strip()
+
+        # script_info.data[_player_final_choice] =
+        partner = TelePlayer(caller.partner)
         await partner.load()
 
         # check if we have a choice
-        if partner.telemarketopia.get(_player_final_choice, False):
-            if script_info.data[_path] == Path_Clavae:
+        if partner.final_choice is not None:
+            if caller.path == Path_Clavae:
                 await add_task.send(
-                    MakeClimaxCallsTask(text_request.caller,
-                                        script_info.data[_player_final_choice],
+                    MakeClimaxCallsTask(caller.number,
+                                        caller.final_choice,
                                         partner.number,
-                                        partner.telemarketopia[_player_final_choice]
+                                        partner.final_choice
                                         )
                 )
             else:
                 await add_task.send(
-                    MakeClimaxCallsTask(partner.number,
-                                        partner.telemarketopia[_player_final_choice],
-                                        text_request.caller,
-                                        script_info.data[_player_final_choice]
+                    MakeClimaxCallsTask(caller.number,
+                                        caller.final_choice,
+                                        partner.number,
+                                        partner.final_choice
                                         )
                 )
 
         return script_info
 
-    async def final_answer_text(self, text_request: TwilRequest, shard: TeleShard, script_info: ScriptInfo):
-        self.d(f'text[{text_request.caller}] final answer? {text_request.text_body})')
-        partner = PhoneNumber(script_info.data[_partner])
+    async def final_answer_text(self, text_request: TwilRequest, caller: TelePlayer, script_info: ScriptInfo):
+        self.d(f'text[{caller}] final answer? {text_request.text_body})')
+        partner = PhoneNumber(caller.partner)
         await add_task.send(SendFinalFinalResult(
-            text_request.caller,
+            caller.number,
             partner,
             text_request.text_body.strip() == '462'
         ))
@@ -94,17 +91,19 @@ class ConferenceChecker(TextHandler):
 
     async def new_text(self, text_request: TwilRequest, shard: TeleShard, script_info: ScriptInfo):
         self.d(f'new_text({text_request.caller}, {text_request.text_body})')
+        caller = TelePlayer(text_request.caller)
+        await caller.load()
         if text_request.num_called == Global_Number_Library.from_label('conference'):
-            if not script_info.data.get(_player_in_first_conference, False):
-                return await self.first_conf_text(text_request, shard, script_info)
+            if not caller.player_in_first_conference:
+                return await self.first_conf_text(text_request, caller, script_info)
 
-            if script_info.data.get(_has_decision_text):
-                return await self.first_conf_choice(text_request, shard, script_info)
+            if caller.was_sent_final_decision_text:
+                return await self.first_conf_choice(text_request, caller, script_info)
 
         elif text_request.num_called == Global_Number_Library.from_label('final'):
-            return await self.final_answer_text(text_request, shard, script_info)
+            return await self.final_answer_text(text_request, caller, script_info)
         else:
-            self.w(f'Do not know what to do with: [From:{text_request.caller}] -> {text_request.num_called}: {text_request.text_body})')
+            self.w(f'Do not know what to do with: [From:{caller}] -> {text_request.num_called}: {text_request.text_body})')
 
 
 # subclass to handle our specific needs around conferences
@@ -112,8 +111,8 @@ class ConferenceEventHandler(Logger):
     async def save_state_for_start(self, partipant: PhoneNumber, partner: PhoneNumber):
         player = TelePlayer(partipant.e164)
         await player.load()
-        player.telemarketopia[_player_in_first_conference] = True
-        player.telemarketopia[_partner] = partner.e164
+        player.player_in_first_conference = True
+        player.partner = partner.e164
         await player.save()
 
     async def event(self, conference:TwilConference, event: str, participant: str):
@@ -132,11 +131,12 @@ class ConferenceEventHandler(Logger):
                 self.d(f"Player {participant} left the first conference!")
                 player_left = TelePlayer(participant)
                 await player_left.load()
-                player_left.telemarketopia[_has_decision_text] = True
                 if player_left.path == Path_Clavae:
                     await send_text(CPostConfOptions, PhoneNumber(participant))
                 else:
                     await send_text(KPostConfOptions, PhoneNumber(participant))
+
+                player_left.was_sent_final_decision_text = True
 
                 await player_left.save()
                 return True
@@ -310,25 +310,6 @@ class TipLineStart(TeleRoom):
     Name = "Tip Line Start"
 
     async def get_audio_for_room(self, context: RoomContext):
-        # we need to select a path
-        # path = context.script.get(_path, None)
-        # print(f'context shard in first room: {context.shard}')
-        # if path is None:
-        #     shard: TeleShard = context.shard
-        #     print(f'context shard in first room: {context.shard}')
-        #     clavae_players = shard.clavae_players
-        #     karen_players = shard.karen_players
-        #
-        #     if len(clavae_players) <= len(karen_players):
-        #         path = Path_Clavae
-        #         shard.append('clavae_players', context.player.number.e164)
-        #     else:
-        #         path = Path_Karen
-        #         shard.append('karen_players', context.player.number.e164)
-        #
-        #     # set path!
-        #     context.script[_path] = path
-
         return await self.get_resource_for_path(context)
 
 

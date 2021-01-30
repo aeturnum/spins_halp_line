@@ -130,6 +130,27 @@ class ScriptInfo:
 #     name: str
 #     locations: Locations
 
+# todo: Thoughts on Player State
+# todo:
+# todo: Originally I thought that nearly all player state changes would take place in rooms and it made
+# todo: sense to optimize changes though the room pathway. Unfortunately, though that's true from the
+# todo: perspective of tracking which room they are in and which room is next, there's a level of state'd
+# todo: storage that does need to be accessed reguarlly and from other places.
+# todo:
+# todo: Additionally, I've been thinking that it would be useful to have a way to have event-based storage.
+# todo: Like, instead of clearing flags at the end of a conference, we create a 'conference1' event on the
+# todo: player, and then we delete the event and all its flags with it. Maybe this could be done though
+# todo: sub-keys for the player.
+# todo:
+# todo: Also I've started storing some information about where the player is in the script in the player object
+# todo: which isn't really a good approach. That should be in the shared script state object and passed around
+# todo: wherever we need it.
+# todo:
+# todo: Eventually, I think we should transform the single monolithic storage into a more modular systems
+# todo: which are loaded and saved seperately:
+# todo: - room / scene location tracking section (like now but w/o `data` members) (plr:+14156864014:telemarketopia:position)
+# todo: - script / scene / room storage (plr:+14156864014:telemarketopia:reg)
+# todo: - events associated with player & script (plr:+14156864014:telemarketopia:event:<name>)
 
 
 class Player(Logger):

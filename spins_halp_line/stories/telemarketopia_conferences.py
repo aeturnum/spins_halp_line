@@ -11,7 +11,7 @@ from spins_halp_line.constants import Root_Url, Credentials
 from spins_halp_line.media.common import Conference_Nudge, Clavae_Conference_Intro, Karen_Conference_Info
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.stories.tele_constants import (
-    _ready_for_conf, _in_final_final, _player_in_first_conference, _partner,
+    _ready_for_conf,
     ConfUnReadyIfReply, ConfUnReadyIfNoReply, ConfReady, ConfReadyTwo,
     CFinalPuzzle1, KFinalPuzzle1, CFinalPuzzle2, KFinalPuzzle2
 )
@@ -81,11 +81,11 @@ class ConferenceTask(Task):
         # cheeck to make sure we've seen them within last 10 mins
         delta = timedelta(minutes=10)
 
-        clavae_ready = self.info.clv_p.check_timestamp(_ready_for_conf, delta)
-        karen_ready = self.info.kar_p.check_timestamp(_ready_for_conf, delta)
+        clavae_time_passed = self.info.clv_p.time_passed(_ready_for_conf)
+        karen_time_passed = self.info.kar_p.time_passed(_ready_for_conf)
 
         # self.d(f'check_player_status({self.info}) -> {clavae_ready}, {karen_ready}')
-        return clavae_ready, karen_ready
+        return clavae_time_passed > delta, karen_time_passed > delta
 
     async def start_child_task(self, task):
         await add_task.send(task)
@@ -150,8 +150,8 @@ class ReturnPlayers(ConferenceTask):
                 to_front=k_r)
 
         # remove info the players got the text
-        await self.info.clv_p.clear([_ready_for_conf, _in_final_final, _player_in_first_conference, _partner])
-        await self.info.kar_p.clear([_ready_for_conf, _in_final_final, _player_in_first_conference, _partner])
+        await self.info.clv_p.reset_conference_flags()
+        await self.info.kar_p.reset_conference_flags()
 
         self.d(f'e_c_a(): sending texts')
         # Text player to let them know the conference is off
@@ -243,8 +243,8 @@ class ConfStartFirst(ConferenceTask):
 
         # remove info the players got the text
         # clear
-        await self.info.clv_p.clear([_ready_for_conf, _in_final_final, _player_in_first_conference, _partner])
-        await self.info.kar_p.clear([_ready_for_conf, _in_final_final, _player_in_first_conference, _partner])
+        await self.info.clv_p.reset_conference_flags()
+        await self.info.kar_p.reset_conference_flags()
 
         self.d(f"ConfStartFirst({self.info}): cleared old flags")
         await send_text(ConfReady, self.info.c_num)
@@ -282,8 +282,8 @@ class DestroyTelemarketopia(Task):
         await clave_p.load()
         await karen_p.load()
 
-        clave_p.telemarketopia[_in_final_final] = True
-        karen_p.telemarketopia[_in_final_final] = True
+        clave_p.in_final_conference = True
+        karen_p.in_final_conference = True
 
         await clave_p.save()
         await karen_p.save()

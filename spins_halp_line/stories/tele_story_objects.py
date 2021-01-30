@@ -6,10 +6,19 @@ from typing import List, Dict, Union, Optional
 from twilio.twiml.voice_response import VoiceResponse, Gather
 
 from spins_halp_line.media.resource_space import RSResource
+from spins_halp_line.resources.numbers import PhoneNumber
 from spins_halp_line.player import ScriptInfo, Player
-from spins_halp_line.stories.story_objects import Room, RoomContext, Scene, Shard, ScriptStateManager
-from spins_halp_line.stories.tele_constants import Telemarketopia_Name, _path
+from spins_halp_line.stories.story_objects import Room, RoomContext, Scene, Shard
+from spins_halp_line.stories.tele_constants import (
+    Telemarketopia_Name, _path, _ready_for_conf
+)
 from spins_halp_line.tasks import add_task
+
+_player_in_first_conference = 'player_in_first_conference'
+_has_decision_text = 'player_has_decision_text'
+_partner = 'ending_partner'
+_player_final_choice = 'final_choice'
+_in_final_final = 'player_in_final_final'
 
 #   _____                 _       _    _____ _
 #  / ____|               (_)     | |  / ____| |
@@ -130,10 +139,86 @@ class PathScene(Scene):
 
 class TelePlayer(Player):
 
+    Infinity = timedelta(days=3650) # 10 years
+
     @property
     def telemarketopia(self) -> Optional[dict]:
         # print(f'Telemarketopia accessor: {self.scripts}')
         return getattr(self.scripts.get(Telemarketopia_Name, {}), 'data', {})
+
+    # flag section
+
+    # If the player has responded to our text asking them if they are ready
+    @property
+    def ready_for_conference(self):
+        return self.telemarketopia.get(_ready_for_conf, False)
+
+    @ready_for_conference.setter
+    def ready_for_conference(self, value):
+        self.telemarketopia[_ready_for_conf] = bool(value)
+
+    # If player is in final conference
+    @property
+    def in_final_conference(self):
+        return self.telemarketopia.get(_in_final_final, False)
+
+    @in_final_conference.setter
+    def in_final_conference(self, value):
+        self.telemarketopia[_in_final_final] = bool(value)
+
+    # If player is in final conference
+    @property
+    def was_sent_final_decision_text(self):
+        return self.telemarketopia.get(_has_decision_text, False)
+
+    @was_sent_final_decision_text.setter
+    def was_sent_final_decision_text(self, value):
+        self.telemarketopia[_has_decision_text] = bool(value)
+
+    # In the first conference or not
+    @property
+    def player_in_first_conference(self) -> bool:
+        return self.telemarketopia.get(_player_in_first_conference, False)
+
+    @player_in_first_conference.setter
+    def player_in_first_conference(self, value):
+        self.telemarketopia[_player_in_first_conference] = bool(value)
+
+    # The final choice the player makes after the conference
+    @property
+    def path(self) -> str:
+        return self.telemarketopia.get(_path, None)
+
+    @path.setter
+    def path(self, value):
+        self.telemarketopia[_path] = str(value)
+
+    # The final choice the player makes after the conference
+    @property
+    def final_choice(self) -> str:
+        return self.telemarketopia.get(_player_final_choice, None)
+
+    @final_choice.setter
+    def final_choice(self, value):
+        self.telemarketopia[_player_final_choice] = str(value)
+
+    # Partner in the conference
+    @property
+    def partner(self) -> str:
+        return self.telemarketopia.get(_partner, None)
+
+    @partner.setter
+    def partner(self, value: Union[str, PhoneNumber, Player]):
+        if isinstance(value, str):
+            value = PhoneNumber(value)
+
+        if isinstance(value, Player):
+            value = value.number
+
+        self.telemarketopia[_partner] = value.e164
+
+    # script_info.data[_player_final_choice] = text_request.text_body.strip()
+    # partner = TelePlayer(script_info.data[_partner])
 
     async def clear(self, keys: Union[List[str], str]):
         self.d(f'clear({keys})')
@@ -144,25 +229,30 @@ class TelePlayer(Player):
 
         await self.save()
 
+    async def reset_conference_flags(self):
+        await self.clear([
+            _ready_for_conf, _in_final_final,
+            _player_in_first_conference, _partner
+        ])
+
     @classmethod
     def record_timestamp(cls, data: dict, name: str):
         data[name] = datetime.now().isoformat()
         print(f'record_timestamp(name:{name}) -> {data}')
 
-    def check_timestamp(self, name: str, within: timedelta):
+    def timestamp(self, name: str):
+        self.record_timestamp(self.telemarketopia, name)
+
+    def time_passed(self, name: str):
         # self.d(f'check_timestamp(name:{name}, within:{timedelta}): {self.telemarketopia}')
+        passed = self.Infinity
         old_ts = self.telemarketopia.get(name, None)
         if old_ts:
-            ready = datetime.fromisoformat(old_ts)
-            self.d(f'check_timestamp(name:{name}) -> {within > (datetime.now() - ready)}')
-            return within > (datetime.now() - ready)
+            # self.d(f'check_timestamp(name:{name}) -> {datetime.now() - datetime.fromisoformat(old_ts)}')
+            passed = datetime.now() - datetime.fromisoformat(old_ts)
 
-        self.d(f'check_timestamp(name:{name}) -> False')
-        return False
-
-    @property
-    def path(self) -> Optional[str]:
-        return self.telemarketopia.get(_path)
+        self.d(f'check_timestamp(name:{name}) -> {passed}')
+        return passed
 
 
 #   _____           _       _      _____ _                        _    _____ _        _
