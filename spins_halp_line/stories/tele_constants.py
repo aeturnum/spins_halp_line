@@ -118,25 +118,12 @@ You’ll need to work together in another voice conference to finish. One of you
 
 
 # state keys
-
 Telemarketopia_Name = "Telemarketopia"
 
 # paths
-
 Path_Clavae = 'Clavae'
 Path_Karen = 'Karen'
 
-
 # _got_text = 'got_text'
 _ready_for_conf = 'player_responded_to_conf_invite'
-
 _path = 'path'
-
-
-# state
-# _clavae_players = 'clave_players'
-# _karen_players = 'karen_players'
-# _clav_waiting_for_conf = 'clave_play_waiting_for_conf'
-# _kar_waiting_for_conf = 'karen_play_waiting_for_conf'
-# _waiting_for_conf = 'conferences_pairs_in_progress'
-# _pair_waiting_for_2nd_conf = 'karen_clave_players_last_conf'

@@ -127,7 +127,7 @@ class ConferenceEventHandler(Logger):
                 await self.save_state_for_start(p2, p1)
                 return True
 
-            if event == 'conference-leave':
+            if event == 'participant-leave':
                 self.d(f"Player {participant} left the first conference!")
                 player_left = TelePlayer(participant)
                 await player_left.load()
