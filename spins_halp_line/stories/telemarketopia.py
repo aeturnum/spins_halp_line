@@ -93,19 +93,21 @@ class ConferenceChecker(TextHandler):
         self.d(f'new_text({text_request.caller}, {text_request.text_body})')
         caller = TelePlayer(text_request.caller)
         await caller.load()
-        if text_request.num_called == Global_Number_Library.from_label('conference'):
-            if not caller.player_in_first_conference:
-                return await self.first_conf_text(text_request, caller, script_info)
+        try:
+            if text_request.num_called == Global_Number_Library.from_label('conference'):
+                if not caller.player_in_first_conference:
+                    return await self.first_conf_text(text_request, caller, script_info)
 
-            if caller.was_sent_final_decision_text:
-                return await self.first_conf_choice(text_request, caller, script_info)
+                if caller.was_sent_final_decision_text:
+                    return await self.first_conf_choice(text_request, caller, script_info)
 
-        elif text_request.num_called == Global_Number_Library.from_label('final'):
-            return await self.final_answer_text(text_request, caller, script_info)
-        else:
-            self.w(f'Do not know what to do with: [From:{caller}] -> {text_request.num_called}: {text_request.text_body})')
-
-        await caller.save()
+            elif text_request.num_called == Global_Number_Library.from_label('final'):
+                return await self.final_answer_text(text_request, caller, script_info)
+            else:
+                self.w(f'Do not know what to do with: [From:{caller}] -> {text_request.num_called}: {text_request.text_body})')
+        finally:
+            # save in any case
+            await caller.save()
 
 
 # subclass to handle our specific needs around conferences
