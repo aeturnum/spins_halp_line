@@ -673,6 +673,9 @@ class ScriptStateManager(Logger):
             # save this version to redis
             await self.save_to_redis(True)
 
+    async def reset(self):
+        self._state = self._make_new_state(None)
+
     @property
     def version(self):
         return self._version
@@ -829,6 +832,10 @@ class Script(Logger):
 
     def get_snapshot(self):
         return self.state_manager._state_dict
+
+    async def reset(self):
+        await self.state_manager.reset()
+        await self.load_state()
 
     async def load_state(self):
         await self.state_manager.load_from_redis()
