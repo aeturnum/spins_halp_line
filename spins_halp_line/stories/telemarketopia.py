@@ -119,15 +119,15 @@ class ConferenceEventHandler(Logger):
         self.d(f"Got conference event: {conference}:{event}!")
         # first conference
         if conference.from_number.e164 == Global_Number_Library.from_label('conference'):
-            if event == 'conference-start':
-                self.d(f"Conference with {conference.participants} started!")
-                p1 = conference.participants[0]
-                p2 = conference.participants[1]
+            if event == TwilConference.Event_Conference_Start:
+                self.d(f"Conference with {conference.invited} started!")
+                p1 = conference.participating[0]
+                p2 = conference.participating[1]
                 await self.save_state_for_start(p1, p2)
                 await self.save_state_for_start(p2, p1)
                 return True
 
-            if event == 'participant-leave':
+            if event == TwilConference.Event_Participant_Leave:
                 self.d(f"Player {participant} left the first conference!")
                 player_left = TelePlayer(participant)
                 await player_left.load()

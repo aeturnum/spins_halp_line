@@ -33,6 +33,14 @@ Conf_Status_Path = "/conf/status/<c_number>"
 
 class TwilConference(Logger):
 
+    Event_Conference_Start = 'conference-start'
+    Event_Participant_Join = 'participant-join'
+    Event_Participant_Leave = 'participant-leave'
+
+    Status_Invited = 'invited'
+    Status_Active = 'active'
+    Status_Left = 'left'
+
     _callbacks = " ".join(['start', 'end', 'leave', 'join'])
     _custom_handlers = []
 
@@ -59,7 +67,7 @@ class TwilConference(Logger):
                 # keep up gid as conference increases
                 _last_conference = int_id
 
-            participants = [PhoneNumber(p) for p in saved_data['participants']]
+            participants = saved_data.get('participants', {})
             from_num = saved_data.get('from')
             sid = saved_data.get('sid', "")
             started = saved_data.get('started', None)
@@ -82,7 +90,7 @@ class TwilConference(Logger):
     def __init__(self, id_, from_number:PhoneNumber, participants=None, sid=None, started=None):
         super(TwilConference, self).__init__()
         if not participants:
-            participants = []
+            participants = {}
 
         if not sid:
             sid = ""
@@ -92,9 +100,25 @@ class TwilConference(Logger):
         # This is the real thing we need to make changes
         # We should get it on callback
         self.twil_sid: str = sid
-        self.participants: List[PhoneNumber] = participants
+        self._participating: Dict[str, str] = participants
         self.intros: Dict[str, int] = {}
         self.started: Optional[datetime] = started
+
+    @property
+    def active(self) -> List[PhoneNumber]:
+        return [PhoneNumber(p) for p, v in self._participating.items() if v == self.Status_Active]
+
+    @property
+    def invited(self) -> List[PhoneNumber]:
+        return [PhoneNumber(p) for p, v in self._participating.items() if v == self.Status_Invited]
+
+    @property
+    def left(self) -> List[PhoneNumber]:
+        return [PhoneNumber(p) for p, v in self._participating.items() if v == self.Status_Left]
+
+    @property
+    def participating(self) -> List[PhoneNumber]:
+        return [PhoneNumber(p) for p, v in self._participating.items()]
 
     @property
     def status_callback(self):
@@ -125,14 +149,14 @@ class TwilConference(Logger):
         return {
             'id': self.id,
             'from': self.from_number.e164,
-            'participants': [p.e164 for p in self.participants],
+            'participants': self._participating,
             'sid': self.twil_sid,
             'started': started,
             'intros': json.dumps(self.intros)
         }
 
     def __str__(self):
-        return f'Conf[{self.from_number}|{self.participants}]'
+        return f'Conf[{self.from_number}|A:{self.active}]'
 
 
 # Headers:
@@ -157,8 +181,6 @@ class TwilConference(Logger):
     # participant-leave: someone left
     # conference-start: both people are in
     async def handle_conf_event(self, body) -> str:
-        # global _conference_lock
-        # global _conferences
 
         async with LockManager(_conference_lock):
             dirty = False
@@ -176,13 +198,19 @@ class TwilConference(Logger):
                 self.twil_sid = conf_sid
                 dirty = True
 
-            if participant and participant not in self.participants:
+            if participant and participant not in self.invited:
                 # add a participant when we first see them in a callback
-                self.participants.append(PhoneNumber(participant))
+                self.invited.append(PhoneNumber(participant))
                 dirty = True
 
-            if event_name == 'conference-start': # conference start, mark time
+            if event_name == self.Event_Conference_Start: # conference start, mark time
                 self.started = datetime.now()
+
+            if event_name == self.Event_Participant_Join:  # conference start, mark time
+                self._participating[participant] = self.Status_Active
+
+            if event_name == self.Event_Participant_Leave:  # conference start, mark time
+                self._participating[participant] = self.Status_Left
 
             dirty = dirty or await self.do_handle_event(event_name, participant)
 
@@ -193,7 +221,7 @@ class TwilConference(Logger):
 
     async def stop(self):
         async with LockManager(_twil_lock):
-            if self.twil_sid:
+            if self.twil_sid and len(self.active) > 1:
                 self.d(f"stop(): Stopping {self.twil_sid}")
                 _twilio_client.conferences(self.twil_sid).update(status=ConferenceInstance.Status.COMPLETED)
             else:
@@ -205,10 +233,6 @@ class TwilConference(Logger):
             await handler.event(self, event, participant)
 
     async def add_participant(self, number_to_call: PhoneNumber, play_first: RSResource=None):
-        # global _twil_lock
-        # global _twilio_client
-        # global _conferences
-        # global _conference_lock
 
         # todo: figure out this whole async machine detection buisness
         async with LockManager(_twil_lock):
@@ -222,7 +246,7 @@ class TwilConference(Logger):
             )
 
         async with LockManager(_conference_lock):
-            self.participants.append(number_to_call)
+            self._participating[number_to_call.e164] = self.Status_Invited
             self.intros[number_to_call.e164] = play_first.id
             await self._save_conference_list(True)
 

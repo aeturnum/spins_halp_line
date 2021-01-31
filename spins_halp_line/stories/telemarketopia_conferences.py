@@ -79,13 +79,13 @@ class ConferenceTask(Task):
         await self.refresh_players()
         # self.d(f'check_player_status({self.info})')
         # cheeck to make sure we've seen them within last 10 mins
-        delta = timedelta(minutes=10)
+        time_limit = timedelta(minutes=10)
 
         clavae_time_passed = self.info.clv_p.time_passed(_ready_for_conf)
         karen_time_passed = self.info.kar_p.time_passed(_ready_for_conf)
 
         # self.d(f'check_player_status({self.info}) -> {clavae_ready}, {karen_ready}')
-        return clavae_time_passed > delta, karen_time_passed > delta
+        return clavae_time_passed < time_limit, karen_time_passed < time_limit
 
     async def start_child_task(self, task):
         await add_task.send(task)
@@ -211,14 +211,15 @@ class ConfWaitForPlayers(ConferenceTask):
             self.state.text_counts[number.e164] += 1
 
     async def execute_conference_action(self):
-        self.d(f"e_c_a():")
+        self.d(f"e_c_a(): {self.state.time_elapsed}s elapsed!")
         c_r, k_r = await self.check_player_status()
         await self.maybe_send_text(c_r, self.info.c_num)
         await self.maybe_send_text(k_r, self.info.k_num)
 
+        self.d(f"e_c_a(): {c_r=}{k_r=}!")
         task_to_start = None
         if not c_r or not k_r:
-            self.d(f"e_c_a(): {c_r}, {k_r}: someone isn't ready after {self.state.time_elapsed}s!")
+            self.d(f"e_c_a(): {c_r}, {k_r}: someone isn't ready!")
             if self.state.time_elapsed < self._wait_before_give_up:
                 # wait another 15 seconds and check again
                 task_to_start = ConfWaitForPlayers(self.info, 15, self.state)
