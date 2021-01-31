@@ -674,7 +674,9 @@ class ScriptStateManager(Logger):
             await self.save_to_redis(True)
 
     async def reset(self):
-        self._state = self._make_new_state(None)
+        async with LockManager(self._lock):
+            self._state = self._make_new_state(None)
+            await self.save_to_redis(True)
 
     @property
     def version(self):
@@ -839,7 +841,6 @@ class Script(Logger):
 
     async def reset(self):
         await self.state_manager.reset()
-        await self.load_state()
 
     async def load_state(self):
         await self.state_manager.load_from_redis()
