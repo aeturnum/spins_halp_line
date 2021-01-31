@@ -158,6 +158,7 @@ class Player(Logger):
     _info = 'info'
     _scripts_key = 'scripts'
     _generation_key = 'generation'
+    _version_key = 'version'
 
     @classmethod
     async def _get_player_keys(cls, db = None) -> List[str]:
@@ -222,6 +223,7 @@ class Player(Logger):
         # self.info: Optional[PlayerInfo] = None
         self.scripts: Optional[Dict[str, ScriptInfo]] = None
         self._loaded = False
+        self._version = 0
 
     # connection stuff
 
@@ -234,10 +236,12 @@ class Player(Logger):
 
     async def load_state_from_dict(self, data):
         self._generation = data.get(self._generation_key, 0)
+        self._version = data.get(self._version_key, 0)
         # deletes the generation key without raising an error if it doesn't exist
         # https://stackoverflow.com/questions/11277432/how-can-i-remove-a-key-from-a-python-dictionary
         # !POP RETURN VALUE INTENTIONALLY IGNORED!
         data.pop(self._generation_key, None)
+        data.pop(self._version_key, None)
 
         # self.info = self._load_info(self._data)
         self.scripts = self._load_scripts(data)
@@ -292,6 +296,7 @@ class Player(Logger):
                 self.d("save(): Aborting due to generaton")
                 return
 
+        self._version += 1
         await self._db.set(self.key, json.dumps(self.data))
         self.d(f"save(): {self.key} <- {json.dumps(self.data)}")
 
@@ -302,6 +307,7 @@ class Player(Logger):
     @property
     def data(self):
         return {
+            self._version_key: self._version,
             self._generation_key: self._generation,
             self._scripts_key: {k: asdict(v) for k, v in self.scripts.items()}
         }
@@ -313,4 +319,4 @@ class Player(Logger):
         return self.scripts.get(script_name, None)
 
     def __str__(self):
-        return f"Plr[{self.number.friendly}]"
+        return f"Plr[{self.number.friendly}]({self._version})"
