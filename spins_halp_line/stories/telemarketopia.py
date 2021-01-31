@@ -105,6 +105,8 @@ class ConferenceChecker(TextHandler):
         else:
             self.w(f'Do not know what to do with: [From:{caller}] -> {text_request.num_called}: {text_request.text_body})')
 
+        await caller.save()
+
 
 # subclass to handle our specific needs around conferences
 class ConferenceEventHandler(Logger):
