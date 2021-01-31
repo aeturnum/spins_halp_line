@@ -685,6 +685,10 @@ class ScriptStateManager(Logger):
         return self._make_shard()
 
     @property
+    def dict(self):
+        return asdict(self._state)
+
+    @property
     def _state_dict(self) -> dict:
         d = asdict(self._state)
         d['version'] = self._version

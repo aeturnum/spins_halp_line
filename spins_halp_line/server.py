@@ -279,15 +279,26 @@ async def debug_conf_call():
 
 @app.route("/debug/nuke", methods=["POST"])
 async def reset_state():
+    # todo: make this work for all scripts
     req = TwilRequest(request)
     await req.load()
 
     # normalize format
-    code  = req.data['code']
+    code = req.data['code']
+    result = {
+        'games': {},
+        'players': {}
+    }
+    result['games'][telemarketopia.name] = telemarketopia.state_manager.dict
     if code == '2501':
         await telemarketopia.reset()
-        for p in await Player.get_all_players():
+
+    for p in await Player.get_all_players():
+        result['players'][p.number] = p.data
+        if code == '2501':
             await p.reset(p)
+
+    return jsonify(result)
 
 @app.route("/debug", methods=["GET"])
 async def debug_interface():
