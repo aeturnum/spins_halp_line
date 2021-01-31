@@ -253,8 +253,6 @@ async def debug_conf_call():
     num1: str = PhoneNumber(req.data['num1']).e164
     num2: str = PhoneNumber(req.data['num2']).e164
 
-    from spins_halp_line.stories.telemarketopia_conferences import ConfStartFirst, StoryInfo
-
     # update shared state
     shard: TeleShard = telemarketopia.state_manager.shard
     if num1 not in shard.clavae_players:
@@ -277,13 +275,19 @@ async def debug_conf_call():
     await telemarketopia.integrate_shard(shard)
 
 
-        # # start process
-        # await add_task.send(
-        #     ConfStartFirst(StoryInfo(num1, num2, telemarketopia.state_manager.shard))
-        # )
-
     return ""
 
+@app.route("/debug/nuke", methods=["POST"])
+async def reset_state():
+    req = TwilRequest(request)
+    await req.load()
+
+    # normalize format
+    code  = req.data['code']
+    if code == '2501':
+        await telemarketopia.reset()
+        for p in await Player.get_all_players():
+            await p.reset(p)
 
 @app.route("/debug", methods=["GET"])
 async def debug_interface():

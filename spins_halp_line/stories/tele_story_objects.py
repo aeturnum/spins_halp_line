@@ -248,10 +248,13 @@ class TelePlayer(Player):
         passed = self.Infinity
         old_ts = self.telemarketopia.get(name, None)
         if old_ts:
-            # self.d(f'check_timestamp(name:{name}) -> {datetime.now() - datetime.fromisoformat(old_ts)}')
+            self.d(f'check_timestamp(name:{name}) -> {datetime.now() - datetime.fromisoformat(old_ts)}')
             passed = datetime.now() - datetime.fromisoformat(old_ts)
 
-        self.d(f'check_timestamp(name:{name}) -> {passed}')
+        if passed == self.Infinity:
+            self.d(f'check_timestamp(name:{name}) -> Infinity!')
+        else:
+            self.d(f'check_timestamp(name:{name}) -> {passed}')
         return passed
 
 

@@ -283,13 +283,14 @@ class TeleStateManager(ScriptStateManager):
     async def player_added(self, player: Player, script_info: ScriptInfo):
         self.d(f'player_added({player})')
         async with LockManager(self._lock):
-            self.d(f'Assigning a path to {player}')
+
             state: TeleState = self._state
             number_str = player.number.e164
 
             # get rid of any stale references
             for state_list in state.all_lists:
                 if number_str in state_list:
+                    self.d(f'Stale reference to "{player}" found in {state_list}! - removing')
                     state_list.remove(number_str)
 
             path = None
@@ -301,6 +302,7 @@ class TeleStateManager(ScriptStateManager):
                 state.karen_players.append(number_str)
 
             # set path!
+            self.d(f'Assigning {player} to path {path}!')
             script_info.data[_path] = path
 
     def __str__(self):

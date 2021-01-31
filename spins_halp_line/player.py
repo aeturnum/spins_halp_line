@@ -173,8 +173,8 @@ class Player(Logger):
             scan = await db.scan(cursor) # don't use autodecode here because the cursor should stay a string I think?
             cursor = scan[0].decode("utf-8") # scan returns bytes
             these_players = [entry.decode("utf-8") for entry in scan[1] if entry[0:4] == b'plr:']
-            for entry in these_players:
-                print(entry)
+            # for entry in these_players:
+            #     print(entry)
 
             players.extend(these_players)
 
@@ -194,6 +194,12 @@ class Player(Logger):
             result[player] = play_dict
 
         return result
+
+    @classmethod
+    async def get_all_players(cls) -> List['Player']:
+        db = new_redis()
+        players = await cls._get_player_keys(db)
+        return [Player(player) for player in players]
 
     @classmethod
     async def reset(cls, plr: Union[str, 'Player']):
