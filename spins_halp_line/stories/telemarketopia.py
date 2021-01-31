@@ -284,7 +284,7 @@ class TeleStateManager(ScriptStateManager):
 
         return state
 
-    async def player_added(self, player: Player, script_info: ScriptInfo):
+    async def player_added(self, player: Player, script_info: ScriptInfo, args: dict = None):
         self.d(f'player_added({player})')
         async with LockManager(self._lock):
 
@@ -298,12 +298,15 @@ class TeleStateManager(ScriptStateManager):
                     state_list.remove(number_str)
 
             path = None
-            if len(state.clavae_players) <= len(state.karen_players):
-                path = Path_Clavae
-                state.clavae_players.append(number_str)
+            if _path in args:
+                path = args[_path]
             else:
-                path = Path_Karen
-                state.karen_players.append(number_str)
+                if len(state.clavae_players) <= len(state.karen_players):
+                    path = Path_Clavae
+                    state.clavae_players.append(number_str)
+                else:
+                    path = Path_Karen
+                    state.karen_players.append(number_str)
 
             # set path!
             self.d(f'Assigning {player} to path {path}!')

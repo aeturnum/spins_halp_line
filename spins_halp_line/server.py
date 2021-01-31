@@ -28,8 +28,12 @@ from spins_halp_line.media.common import (
 )
 from spins_halp_line.stories.telemarketopia import telemarketopia
 from spins_halp_line.stories.tele_story_objects import TeleShard
+from spins_halp_line.stories.tele_constants import (
+    _path, Path_Clavae, Path_Karen
+)
 from spins_halp_line.events import event_websocket, send_event
 from spins_halp_line.player import Player
+from spins_halp_line.stories.tele_story_objects import TelePlayer
 from spins_halp_line.actions.conferences import (
     Conf_Twiml_Path,
     Conf_Status_Path,
@@ -253,27 +257,26 @@ async def debug_conf_call():
     num1: str = PhoneNumber(req.data['num1']).e164
     num2: str = PhoneNumber(req.data['num2']).e164
 
+    clavae = TelePlayer(num1)
+    karen  = TelePlayer(num2)
+
+    await clavae.load()
+    await karen.load()
+
+    await telemarketopia.start_game_for_player(clavae, {_path: Path_Clavae})
+    await telemarketopia.start_game_for_player(karen, {_path: Path_Karen})
+
+    await clavae.save()
+    await karen.save()
     # update shared state
     shard: TeleShard = telemarketopia.state_manager.shard
-    if num1 not in shard.clavae_players:
-        shard.append('clavae_players', num1)
-    if num2 not in shard.karen_players:
-        shard.append('karen_players', num2)
-
-
-    for p in [Player(num1), Player(num2)]:
-        await p.load()
-        await telemarketopia.start_game_for_player(p)
-        await p.save()
-
-
     # If this is debugging an already existing conference, they'll
     if num1 not in shard.clavae_waiting_for_conf or num2 not in shard.karen_waiting_for_conf:
         shard.append('clavae_waiting_for_conf', num1)
         shard.append('karen_waiting_for_conf', num2)
 
+    # kick off actual conference
     await telemarketopia.integrate_shard(shard)
-
 
     return ""
 
