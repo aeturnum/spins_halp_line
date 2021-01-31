@@ -277,6 +277,12 @@ async def debug_conf_call():
 
     return ""
 
+@app.route("/debug/reduce", methods=["POST", "GET"])
+async def trigger_reduce():
+    await telemarketopia.integrate_shard(telemarketopia.state_manager.shard)
+
+    return ""
+
 @app.route("/debug/nuke", methods=["POST"])
 async def reset_state():
     # todo: make this work for all scripts
