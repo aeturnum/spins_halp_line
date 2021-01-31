@@ -285,6 +285,8 @@ class TeleStateManager(ScriptStateManager):
         return state
 
     async def player_added(self, player: Player, script_info: ScriptInfo, args: dict = None):
+        if args is None:
+            args = {}
         self.d(f'player_added({player})')
         async with LockManager(self._lock):
 

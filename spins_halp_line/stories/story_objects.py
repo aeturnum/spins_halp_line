@@ -908,7 +908,7 @@ class Script(Logger):
         script_info = ScriptInfo()  # fresh!
         player.set_script(self.name, script_info)
 
-        await self.state_manager.player_added(player, script_info)
+        await self.state_manager.player_added(player, script_info, args)
 
         return script_info
 
