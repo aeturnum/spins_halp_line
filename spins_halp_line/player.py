@@ -1,12 +1,10 @@
-from dataclasses import dataclass, field, asdict, fields as datafields
+from dataclasses import dataclass, field, asdict
 import json
 from typing import Any, Dict, Optional, List, Union
-from copy import deepcopy
 
 from spins_halp_line.util import Logger
 from spins_halp_line.resources.redis import new_redis
 from spins_halp_line.resources.numbers import PhoneNumber
-from spins_halp_line.errors import DataIntegrityError
 from spins_halp_line.constants import Script_New_State, Script_End_State
 
 
@@ -245,7 +243,8 @@ class Player(Logger):
 
         # self.info = self._load_info(self._data)
         self.scripts = self._load_scripts(data)
-        self.d(f'Loaded: {self.scripts}')
+        print_dict = {k: v.data for k, v in self.scripts.items()}
+        self.d(f'Loaded: {print_dict}')
 
         self._data = data
         self._loaded = True
@@ -264,6 +263,13 @@ class Player(Logger):
 
         # replace whatever was in the db with the state we got passed
         await self.save()
+
+    async def restore_to(self, new_state: dict):
+        await self.load_state_from_dict(new_state)
+        await self.save()
+
+    def get_snapshot_name(self):
+        return self.key
 
     def get_snapshot(self):
         return self.data
@@ -290,11 +296,21 @@ class Player(Logger):
         jsn = await self._db.get(self.key)
         if jsn:
             data = json.loads(jsn)
+
             db_generation = data.get(self._generation_key, 0)
+            db_version = data.get(self._version_key, 0)
+
             if db_generation > self._generation:
                 # Do not overwrite
                 self.d("save(): Aborting due to generaton")
                 return
+
+            if db_version > self._version:
+                # Do not overwrite
+                self.d(
+                    f"Warning: Sync problem detected: {self.data}\n>>>overwriting>>>>\n{jsn}"
+                )
+
 
         self._version += 1
         await self._db.set(self.key, json.dumps(self.data))
@@ -320,3 +336,17 @@ class Player(Logger):
 
     def __str__(self):
         return f"Plr[{self.number.friendly}]({self._version})"
+
+#
+#  _____       _                        _             _
+# |  __ \     | |                      | |           | |
+# | |  | | ___| |__  _   _  __ _       | |_   _ _ __ | | __
+# | |  | |/ _ \ '_ \| | | |/ _` |  _   | | | | | '_ \| |/ /
+# | |__| |  __/ |_) | |_| | (_| | | |__| | |_| | | | |   <
+# |_____/ \___|_.__/ \__,_|\__, |  \____/ \__,_|_| |_|_|\_\
+#                           __/ |
+#                          |___/
+
+async def replace_player_state(number: str, new_state_dict: dict):
+    player = Player(number)
+    await player.advance_generation_to(new_state_dict)

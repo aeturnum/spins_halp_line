@@ -24,7 +24,6 @@ from .story_objects import (
 
 from spins_halp_line.util import Logger, LockManager
 from spins_halp_line.tasks import add_task
-from spins_halp_line.player import Player
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import (
     Puppet_Master
@@ -42,18 +41,17 @@ from spins_halp_line.constants import (
 
 class ConferenceChecker(TextHandler):
 
-    async def first_conf_text(self, text_request: TwilRequest, caller: TelePlayer, script_info: ScriptInfo):
-        self.d(f'new_text({text_request.caller}) - player is agreeing to conf?')
+    async def first_conf_text(self, text_request: TwilRequest, caller: TelePlayer):
+        self.d(f'new_text({caller}) - player is agreeing to conf?')
         # only set if they are not yet in their first conference
         caller.timestamp(_ready_for_conf)
-        return script_info
+        return caller
 
-    async def first_conf_choice(self, text_request: TwilRequest, caller: TelePlayer, script_info: ScriptInfo):
+    async def first_conf_choice(self, text_request: TwilRequest, caller: TelePlayer):
         self.d(f'new_text({text_request.caller}, {text_request.text_body})')
 
         caller.final_choice = text_request.text_body.strip()
 
-        # script_info.data[_player_final_choice] =
         partner = TelePlayer(caller.partner)
         await partner.load()
 
@@ -76,9 +74,9 @@ class ConferenceChecker(TextHandler):
                                         )
                 )
 
-        return script_info
+        return caller
 
-    async def final_answer_text(self, text_request: TwilRequest, caller: TelePlayer, script_info: ScriptInfo):
+    async def final_answer_text(self, text_request: TwilRequest, caller: TelePlayer):
         self.d(f'text[{caller}] final answer? {text_request.text_body})')
         partner = PhoneNumber(caller.partner)
         await add_task.send(SendFinalFinalResult(
@@ -87,27 +85,24 @@ class ConferenceChecker(TextHandler):
             text_request.text_body.strip() == '462'
         ))
 
-        return script_info
+        return caller
 
-    async def new_text(self, text_request: TwilRequest, shard: TeleShard, script_info: ScriptInfo):
+    async def new_text(self, text_request: TwilRequest, shard: TeleShard, caller: TelePlayer):
         self.d(f'new_text({text_request.caller}, {text_request.text_body})')
-        caller = TelePlayer(text_request.caller)
-        await caller.load()
-        try:
-            if text_request.num_called == Global_Number_Library.from_label('conference'):
-                if not caller.player_in_first_conference:
-                    return await self.first_conf_text(text_request, caller, script_info)
 
-                if caller.was_sent_final_decision_text:
-                    return await self.first_conf_choice(text_request, caller, script_info)
+        if text_request.num_called == Global_Number_Library.from_label('conference'):
+            if not caller.player_in_first_conference:
+                return await self.first_conf_text(text_request, caller)
 
-            elif text_request.num_called == Global_Number_Library.from_label('final'):
-                return await self.final_answer_text(text_request, caller, script_info)
-            else:
-                self.w(f'Do not know what to do with: [From:{caller}] -> {text_request.num_called}: {text_request.text_body})')
-        finally:
-            # save in any case
-            await caller.save()
+            if caller.was_sent_final_decision_text:
+                return await self.first_conf_choice(text_request, caller)
+
+        elif text_request.num_called == Global_Number_Library.from_label('final'):
+            return await self.final_answer_text(text_request, caller)
+        else:
+            self.w(f'Do not know what to do with: [From:{caller}] -> {text_request.num_called}: {text_request.text_body})')
+
+        return caller
 
 
 # subclass to handle our specific needs around conferences
@@ -200,6 +195,9 @@ class TeleStateManager(ScriptStateManager):
             'list': clean_list
         }
 
+    async def create_player(self, number: str) -> TelePlayer:
+        return TelePlayer(number)
+
     async def on_startup(self):
         self.d('on_startup()')
         async with LockManager(self._lock):
@@ -284,7 +282,7 @@ class TeleStateManager(ScriptStateManager):
 
         return state
 
-    async def player_added(self, player: Player, script_info: ScriptInfo, args: dict = None):
+    async def player_added(self, player: TelePlayer, script_info: ScriptInfo, args: dict = None):
         if args is None:
             args = {}
         self.d(f'player_added({player})')

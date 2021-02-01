@@ -1,7 +1,6 @@
 from quart import Response, Request
 from typing import Optional
 
-from spins_halp_line.player import Player
 from spins_halp_line.resources.numbers import PhoneNumber
 
 #
@@ -87,7 +86,7 @@ class TwilRequest(object):
         self.req: Request = request
         self._loaded = False
         self._data = {}
-        self.player: Optional[Player] = None
+        # self.player: Optional[Player] = None
 
     async def load(self):
         if not self._loaded:
@@ -97,9 +96,9 @@ class TwilRequest(object):
                 elif 'json' in self.content_type:
                     self._data = await self.req.get_json()
 
-            if self.caller:
-                self.player = Player(self.caller)
-                await self.player.load()
+            # if self.caller:
+            #     self.player = Player(self.caller)
+            #     await self.player.load()
 
             self._loaded = True
 

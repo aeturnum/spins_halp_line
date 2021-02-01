@@ -6,7 +6,7 @@ import traceback
 from twilio.twiml.voice_response import VoiceResponse
 import trio
 
-from spins_halp_line.util import Logger, Snapshot, LockManager
+from spins_halp_line.util import Logger, StateCopy, LockManager
 from spins_halp_line.resources.numbers import PhoneNumber
 from spins_halp_line.twil import TwilRequest
 from spins_halp_line.player import Player
@@ -20,6 +20,7 @@ from spins_halp_line.player import SceneInfo, ScriptInfo, RoomInfo
 from spins_halp_line.events import send_event
 from spins_halp_line.errors import StoryNavigationException
 from spins_halp_line.actions.errors import error_sms
+from spins_halp_line.debug import Restoreable, Restoreer
 
 
 @dataclass
@@ -164,6 +165,87 @@ class Shard:
             await self._parent.integrate(self._changes)
             self._changes = []
 
+#
+#  _____       _                        _             _
+# |  __ \     | |                      | |           | |
+# | |  | | ___| |__  _   _  __ _       | |_   _ _ __ | | __
+# | |  | |/ _ \ '_ \| | | |/ _` |  _   | | | | | '_ \| |/ /
+# | |__| |  __/ |_) | |_| | (_| | | |__| | |_| | | | |   <
+# |_____/ \___|_.__/ \__,_|\__, |  \____/ \__,_|_| |_|_|\_\
+#                           __/ |
+#                          |___/
+
+
+class Snapshot(Logger):
+
+    _index = {
+
+    }
+    _num = 0
+
+    @classmethod
+    def get_snapshot(cls, index) -> Optional['Snapshot']:
+        index = str(index)
+        return cls._index.get(index, None)
+
+    def __init__(self, script: Optional[Restoreable], players: Optional[List[Restoreable]]):
+        super(Snapshot, self).__init__()
+        self.script_name: Optional[str] = None
+        self.script_snap = None
+        self.players: Dict[str, dict] = {}
+        self.index = str(self._num)
+        self._num += 1
+
+        self._from_objects(script, players)
+
+    def _from_objects(self, script: Optional[Restoreable], players: Optional[Union[List[Restoreable], Restoreable]]):
+        if script:
+            self.script_name = script.get_snapshot_name()
+            self.script_snap = script.get_snapshot()
+        if players:
+            if not isinstance(players, list):
+                players = [players]
+
+            self.players = {
+                p.get_snapshot_name(): p.get_snapshot() for p in players
+            }
+
+    def save(self):
+        # called when a snapshot is used
+        self._index[self.index] = self.json
+        self.e(f"Snapshot {self.index} saved!:\n{self.json}")
+
+    async def restore(self, script: Restoreer):
+        await script.restore_states(
+            self.script_name,
+            self.script_snap,
+            self.players
+        )
+
+    @property
+    def data(self):
+        return {
+            'script': [self.script_name, self.script_snap],
+            'players': self.players
+        }
+
+    @property
+    def json(self):
+        return json.dumps(self.data)
+
+    @staticmethod
+    def from_json(jsn: Union[str, dict]):
+        ss = Snapshot(None, None)
+
+        if isinstance(jsn, str):
+            jsn = json.loads(jsn)
+
+        ss.script_name = jsn['script'][0]
+        ss.script_snap = jsn['script'][1]
+        ss.players = jsn['players']
+
+        return ss
+
 
 class RoomContext(dict):
 
@@ -275,8 +357,8 @@ class TextHandler(Logger):
     Name = "Base Text Handler"
 
     # Must add choice to room state outside of this
-    async def new_text(self, text_request: TwilRequest, shard: Shard, script_info: ScriptInfo):
-        return script_info
+    async def new_text(self, text_request: TwilRequest, shard: Shard, player: Player):
+        return player
 
     # load any resources that we need
     async def load(self):
@@ -416,7 +498,7 @@ class Scene(Logger):
         self.d(f"Choices_for_room({room}) -> {choices}")
         return choices
 
-    async def play(self, shard: Shard, request: TwilRequest, script_state: ScriptInfo):
+    async def play(self, request: TwilRequest, player: Player, shard: Shard, script_state: ScriptInfo):
         self.d(f'play({request}, {script_state})')
         scene_state = self._get_state(script_state)
         self.d(f'play({request}, {script_state}): {scene_state}')
@@ -425,6 +507,7 @@ class Scene(Logger):
         # tell the room what happened last time
         script_state, scene_state = await self._notify_last_room_of_choice(
             request,
+            player,
             shard,
             script_state,
             scene_state
@@ -453,16 +536,16 @@ class Scene(Logger):
         room_state = scene_state.room_state(room.Name)
         self.d(f"room state: {room_state}")
         # make whole context object
-        context = RoomContext(request.player, shard, script_state, scene_state, room_state)
+        context = RoomContext(player, shard, script_state, scene_state, room_state)
 
-        await send_event(f"{request.player} entering {room}!")
+        await send_event(f"{player} entering {room}!")
         try:
             twilio_action = await room.action(context)
         except Exception as e:
             raise StoryNavigationException("Failed while trying to take room action", e)
 
         # backup
-        script_state_snap = Snapshot(script_state)
+        script_state_snap = StateCopy(script_state)
         try:
             # post room updates
             # I am now paranoid about state not getting written and am done fucking around
@@ -503,6 +586,7 @@ class Scene(Logger):
     async def _notify_last_room_of_choice(
             self,
             request: TwilRequest,
+            player: Player,
             shard: Shard,
             script_state: ScriptInfo,
             our_info: SceneInfo) -> Tuple[ScriptInfo, SceneInfo]:
@@ -513,7 +597,7 @@ class Scene(Logger):
             room_state = our_info.room_state(prev_room.Name)
 
             # room)state.choice will NOT have the new choice in it
-            context = RoomContext(request.player, shard, script_state, our_info, room_state)
+            context = RoomContext(player, shard, script_state, our_info, room_state)
             await prev_room.new_player_choice(player_choice, context)
 
             script_state, our_info, room_state = context._pass_back_changes(script_state, our_info, room_state)
@@ -708,6 +792,9 @@ class ScriptStateManager(Logger):
     async def player_added(self, player: Player, script_info: ScriptInfo, args: dict=None):
         pass
 
+    async def create_player(self, number: Union[PhoneNumber, str]) -> Player:
+        return Player(number)
+
     # This is used to check if our version is out of date
     async def sync_redis(self, locked=False):
         db = new_redis()
@@ -830,11 +917,31 @@ class Script(Logger):
     def add_script(cls, script):
         cls.Active_Scripts.append(script)
 
+    @classmethod
+    async def restore_states(cls, state_name: str, new_state_dict: dict, players: Dict[str, dict]):
+        target_script = None
+        for script in cls.Active_Scripts:
+            if script.name == state_name:
+                target_script = script
+
+        if target_script:
+            # Who knows what happens if there is an exception in here
+            target_script.state_manager._state = target_script.state_manager._make_new_state(new_state_dict)
+            # will replace all versions of the state with this version
+            await target_script.state_manager.set_new_generation()
+
+            for number, data in players.items():
+                p = await target_script.create_player(number)
+                await p.restore_to(data)
+
     # methods for dealing with shared state
 
     @property
     def db_key(self):
         return f'script:{self.name}'
+
+    def get_snapshot_name(self):
+        return self.name
 
     def get_snapshot(self):
         return self.state_manager._state_dict
@@ -854,11 +961,11 @@ class Script(Logger):
         await add_task.send(AfterRequestActions(shard, self.state_manager))
 
     # return true if player is going t
-    async def request_from_player(self, request: TwilRequest):
+    async def request_made_by_active_player(self, request: TwilRequest):
 
-        await request.load()  # load player
+        player = await self.create_player(request.caller)
 
-        return self.player_is_playing(request.player)
+        return self.player_is_playing(player)
 
     def player_is_playing(self, player: Player):
         playing = False
@@ -880,24 +987,31 @@ class Script(Logger):
         self.d(f"Can {request} start a new game? -> {scene_state is not None}")
         return scene_state is not None
 
-    async def process_text(self, request: TwilRequest, snapshot):
+    async def process_text(self, request: TwilRequest):
         self.d(f'process_text({request})')
+
+        player = await self.create_player(request.caller)
+        snapshot: Snapshot = Snapshot(self, [player])
 
         try:
             if not request.is_text:
                 self.w(f'Request {request} is not a text! Aborting!')
                 return
 
-            script_info: ScriptInfo = request.player.script(self.name)
+            script_info: ScriptInfo = player.script(self.name)
 
             if script_info is None or script_info.is_complete:
-                self.d(f'Player {request.player} is not on our script, returning!')
+                self.d(f'Player {player} is not on our script, returning!')
                 return
 
             for handler in self.text_handlers:
                 shard: StateShard = self.state_manager.shard
 
-                script_info = await handler.new_text(request, shard, script_info)
+                player = await handler.new_text(request, shard, player)
+
+                await self.integrate_shard(shard)
+
+            await player.save()
 
             return
         except Exception as e:
@@ -912,24 +1026,35 @@ class Script(Logger):
 
         return script_info
 
-    async def play(self, request: TwilRequest, snapshot):
+    async def create_player(self, number: Union[PhoneNumber, str]):
+        # todo: If we are being honest, this doesn't make a lot of structural sense. Probably the script should
+        # todo: create the players, but we've already put all the script-specific things into the state_manager
+        # todo: so we're going to go one more step down this road. We'd probably want to revisit this once we
+        # todo: transition the state mangager to something more state-machine-esq
+        player = await self.state_manager.create_player(number)
+        await player.load()
+        return player
+
+    async def play(self, request: TwilRequest):
         self.d(f'play({request})')
 
         # note: some sloppy planning has resulted in confusing naming. There is the script state [for the player],
         # which we frequently call the script state, and then there is the script state [for the script] that is
         # shared and used by all players going through a script
-        script_info: ScriptInfo = request.player.script(self.name)
+        player = await self.create_player(request.caller)
+        script_info: ScriptInfo = player.script(self.name)
         shard: StateShard = self.state_manager.shard
+        snapshot: Snapshot = Snapshot(self, [player])
 
-        if not self.player_is_playing(request.player):
-            script_info = await self.start_game_for_player(request.player)
+        if not self.player_is_playing(player):
+            script_info = await self.start_game_for_player(player)
 
         self.d(f'play({request}) - {script_info}')
 
         scene_state = self._get_scene_state(script_info, request.num_called)
 
         if scene_state is None:
-            self.e(f'!!!\n!!!\nCould not get Scene for: {request.num_called} by {request.player.number}')
+            self.e(f'!!!\n!!!\nCould not get Scene for: {request.num_called} by {player.number}')
             return error_response()
 
         scene = scene_state.scene
@@ -937,31 +1062,32 @@ class Script(Logger):
         # if something goes wrong
         result = error_response()
         try:
-            result = await scene.play(shard, request, script_info)
+            result = await scene.play(request, player, shard, script_info)
 
             await self.integrate_shard(shard)
             # apply changes
 
             if scene.done(script_info):
                 if scene_state.next_state == Script_Ignore_Change:
-                    self.d(f'play({request}) - scene is done, but it;s a scene that shouldnt change the player')
+                    self.d(f'play({request}) - scene is done, but its a scene that shouldnt change the player')
                 else:
                     self.d(f'play({request}) - scene is done. Script state: {script_info.state} -> {scene_state.next_state}')
                     script_info.scene_history.append(scene.Name)
                     script_info.state = scene_state.next_state
 
-            request.player.set_script(self.name, script_info)  # should not be needed
+            player.set_script(self.name, script_info)  # should not be needed
+            await player.save()
         except Exception as e:
             await self._handle_exception(request, e, snapshot)
 
         return result
 
-    async def _handle_exception(self, request, exception: Exception, snapshot):
+    async def _handle_exception(self, request, exception: Exception, snapshot: Snapshot):
         self.e(f'Got exception from scene.play: {exception}: {traceback.extract_tb(exception.__traceback__).format()}')
         self.e(f'Returning generic confused response.')
         # save snap to restore state
         snapshot.save()
-        await error_sms(f'Player {request.player} in Scene {self} encountered an exception: {exception}')
+        await error_sms(f'Player {request.caller} in Scene {self} encountered an exception: {exception}')
 
     def _get_scene_state(self, info: ScriptInfo, number_called: PhoneNumber) -> Optional[SceneAndState]:
         self.d(f'_get_scene_set(info, {number_called.e164})')

@@ -21,6 +21,7 @@ from spins_halp_line.media.common import All_Resources
 from spins_halp_line.media.resource_space import RSResource
 from spins_halp_line.stories.story_objects import (
     Script,
+    Snapshot,
     confused_response
 )
 from spins_halp_line.media.common import (
@@ -40,7 +41,6 @@ from spins_halp_line.actions.conferences import (
     conferences,
     load_conferences
 )
-from spins_halp_line.debug import Snapshot
 
 Script.add_script(telemarketopia)
 
@@ -106,24 +106,24 @@ async def main_number():
     # players already in a game
     # todo: improve this system
     for script in Script.Active_Scripts:
-        if await script.request_from_player(req):
-            ss = Snapshot(script, req.player)
-            response = await script.play(req, ss)
+        if await script.request_made_by_active_player(req):
+            response = await script.play(req)
+            # await player.save()
             break
 
     # start a new game
     if not response:
         for script in Script.Active_Scripts:
             if await script.call_could_start_game(req):
-                ss = Snapshot(script, req.player)
-                response = await script.play(req, ss)
+                response = await script.play(req)
+                # await player.save()
                 break
 
     if not response:
         response = confused_response()
 
     # save any state changes we recorded
-    await req.player.save()
+    # await req.player.save()
 
     return t_resp(response)
 
@@ -133,11 +133,8 @@ async def handle_text():
     await req.load()
 
     for script in Script.Active_Scripts:
-        if await script.request_from_player(req):
-            ss = Snapshot(script, req.player)
-            await script.process_text(req, ss)
-            # whoops lol need to save the player
-            await req.player.save()
+        if await script.request_made_by_active_player(req):
+            await script.process_text(req)
             break
 
     return t_resp("")
@@ -342,7 +339,7 @@ async def delete_player(p_num):
 async def load_snapshot(snap_num):
     snap = Snapshot.get_snapshot(snap_num)
     if snap:
-        await snap.restore()
+        await snap.restore(telemarketopia)
 
     return ""
 
@@ -352,7 +349,7 @@ async def load_snapshot_from_body():
     await req.load()
     snap = Snapshot.from_json(req.data.get('snapshot'))
     if snap:
-        await snap.restore()
+        await snap.restore(telemarketopia)
 
     return ""
 
