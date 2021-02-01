@@ -312,6 +312,8 @@ class TeleStateManager(ScriptStateManager):
             self.d(f'Assigning {player} to path {path}!')
             script_info.data[_path] = path
 
+            await self.save_to_redis(True)
+
     def __str__(self):
         return f'TeleSM'
 

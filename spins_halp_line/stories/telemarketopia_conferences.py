@@ -135,6 +135,7 @@ class ReturnPlayers(ConferenceTask):
             await self.conference.stop()
 
         self.d(f'e_c_a(): registering moves')
+        self.d(f'e_c_a(): registering moves: {self.info.shard.clavae_in_conf=}, {self.info.c_num=}')
         if self.info.c_num.e164 in self.info.shard.clavae_in_conf:
             self.info.shard.move(
                 "clavae_in_conf",
@@ -216,10 +217,10 @@ class ConfWaitForPlayers(ConferenceTask):
         await self.maybe_send_text(c_r, self.info.c_num)
         await self.maybe_send_text(k_r, self.info.k_num)
 
-        self.d(f"e_c_a(): {c_r=}{k_r=}!")
+        self.d(f"e_c_a(): {c_r=}, {k_r=}!")
         task_to_start = None
         if not c_r or not k_r:
-            self.d(f"e_c_a(): {c_r}, {k_r}: someone isn't ready!")
+            self.d(f"e_c_a(): someone isn't ready!")
             if self.state.time_elapsed < self._wait_before_give_up:
                 # wait another 15 seconds and check again
                 task_to_start = ConfWaitForPlayers(self.info, 15, self.state)
