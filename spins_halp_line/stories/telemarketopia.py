@@ -307,10 +307,13 @@ class TeleStateManager(ScriptStateManager):
             else:
                 if len(state.clavae_players) <= len(state.karen_players):
                     path = Path_Clavae
-                    state.clavae_players.append(number_str)
                 else:
                     path = Path_Karen
-                    state.karen_players.append(number_str)
+
+            if path == Path_Clavae:
+                state.clavae_players.append(number_str)
+            else:
+                state.karen_players.append(number_str)
 
             # set path!
             self.d(f'Assigning {player} to path {path}!')

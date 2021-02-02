@@ -323,6 +323,7 @@ async def reset_state():
         await telemarketopia.reset()
 
     for p in await Player.get_all_players():
+        await p.load()
         result['players'][p.number] = p.data
         if code == '2501':
             await p.reset(p)
