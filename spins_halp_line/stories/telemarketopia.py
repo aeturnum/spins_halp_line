@@ -67,10 +67,10 @@ class ConferenceChecker(TextHandler):
                 )
             else:
                 await add_task.send(
-                    MakeClimaxCallsTask(caller.number,
-                                        caller.final_choice,
-                                        partner.number,
-                                        partner.final_choice
+                    MakeClimaxCallsTask(partner.number,
+                                        partner.final_choice,
+                                        caller.number,
+                                        caller.final_choice
                                         )
                 )
 

@@ -86,6 +86,16 @@ async def send_sms(
                 media_url
             )
 
+async def make_call(to_num: PhoneNumber, from_num: PhoneNumber, callback_url: str):
+    global _twilio_client
+    global _twil_lock
+
+    async with LockManager(_twil_lock):
+        _twilio_client.calls.create(
+            url=callback_url,
+            to=to_num.e164,
+            from_=from_num.e164
+        )
 
 
 class TextTask(Task):

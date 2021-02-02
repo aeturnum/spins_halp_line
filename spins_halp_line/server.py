@@ -15,9 +15,11 @@ from twilio.twiml.voice_response import VoiceResponse, Play
 
 from spins_halp_line.tasks import Trio_Task_Task_Object_Runner, GitUpdate, Task, add_task
 from spins_halp_line.twil import t_resp, TwilRequest
+from spins_halp_line.actions.twilio import make_call
 from spins_halp_line.util import do_monkey_patches, get_logger
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import All_Resources
+from spins_halp_line.constants import Root_Url
 from spins_halp_line.media.resource_space import RSResource
 from spins_halp_line.stories.story_objects import (
     Script,
@@ -25,7 +27,8 @@ from spins_halp_line.stories.story_objects import (
     confused_response
 )
 from spins_halp_line.media.common import (
-    End_A, End_B, End_C, End_D, End_E, End_F, End_G, End_H, End_I, End_J
+    End_A, End_B, End_C, End_D, End_E,
+    End_F, End_G, End_H, End_I, End_J
 )
 from spins_halp_line.stories.telemarketopia import telemarketopia
 from spins_halp_line.stories.tele_story_objects import TeleShard
@@ -197,11 +200,11 @@ async def ending_33():
 # final climax responses
 @app.route("/finalclimax/right", methods=['GET', 'POST'])
 async def final_final_right():
-    return get_ending_response([End_J])
+    return await get_ending_response([End_J])
 
 @app.route("/finalclimax/wrong", methods=['GET', 'POST'])
 async def final_final_wrong():
-    return get_ending_response([End_I])
+    return await get_ending_response([End_I])
 
 #   _____             __                                _____      _ _ _                _
 #  / ____|           / _|                              / ____|    | | | |              | |
@@ -297,6 +300,23 @@ async def debug_start_game():
 
     await p.save()
     # update shared state
+
+    return ""
+
+@app.route("/debug/trigger-climax", methods=["POST"])
+async def trigger_reduce():
+    req = TwilRequest(request)
+    await req.load()
+
+    num = PhoneNumber(req.data['number'])
+    c_choice = str(req.data.get('c_choice', 1))
+    k_choice = str(req.data.get('k_choice', 1))
+
+    await make_call(
+        num,
+        Global_Number_Library.random(),
+        '/'.join([Root_Url, 'climax', c_choice, k_choice])
+    )
 
     return ""
 

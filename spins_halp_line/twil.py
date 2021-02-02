@@ -190,7 +190,7 @@ class TwilRequest(object):
         return f'TR[{sigil}]'
 
 
-def t_resp(response):
+def t_resp(response) -> Response:
     resp = Response(str(response))
     resp.headers['Content-Type'] = 'text/xml'
     return resp
