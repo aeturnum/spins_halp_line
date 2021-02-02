@@ -104,6 +104,7 @@ class TextTask(Task):
             image = self.Image.url
 
         from_num = Global_Number_Library.from_label(self.From_Number_Label)
+        self.d(f'Text[{from_num} -> {self.to}]: {self.Text}')
         await send_sms(
             from_num,
             self.to,

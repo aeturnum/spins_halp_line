@@ -127,9 +127,9 @@ class ConferenceEventHandler(Logger):
                 return True
 
             if event == TwilConference.Event_Participant_Leave:
-                self.d(f"Player {participant} left the first conference!")
                 player_left = TelePlayer(participant)
                 await player_left.load()
+                self.d(f"Player {participant}({player_left.path}) left the first conference!")
                 if player_left.path == Path_Clavae:
                     await send_text(CPostConfOptions, PhoneNumber(participant))
                 else:
