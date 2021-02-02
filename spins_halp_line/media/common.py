@@ -18,7 +18,9 @@ Clavae_Final_Puzzle_Image_2 = RSResource(1090)
 Karen_Conference_Info = RSResource(1089)
 Clavae_Conference_Intro = RSResource(1074)
 
-Puppet_Master = RSResource(1098)
+# Easter Egg
+Puppet_Master = RSResource(1099)
+AI_Password = RSResource(1069)
 
 Conference_Nudge = RSResource(1050)
 
@@ -45,6 +47,7 @@ All_Resources = [
     Clavae_Final_Puzzle_Image_1,
     Clavae_Final_Puzzle_Image_2,
     Puppet_Master,
+    AI_Password,
     Karen_Conference_Info,
     Clavae_Conference_Intro,
     Conference_Nudge,

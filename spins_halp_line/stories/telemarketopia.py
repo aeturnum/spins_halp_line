@@ -25,7 +25,7 @@ from spins_halp_line.util import Logger, LockManager
 from spins_halp_line.tasks import add_task
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import (
-    Puppet_Master
+    Puppet_Master, AI_Password, Look_At_You_Hacker
 )
 from .telemarketopia_conferences import ConfStartFirst, MakeClimaxCallsTask, SendFinalFinalResult, StoryInfo
 from ..actions.twilio import send_text
@@ -536,10 +536,15 @@ class DatabaseCorrupted(TeleRoom):
 
 class Ghost(TeleRoom):
     Name = 'Ghost'
-    Gather = False
 
     async def get_audio_for_room(self, context: RoomContext):
-        return Puppet_Master
+        return [Puppet_Master, AI_Password]
+
+class Shodan(TeleRoom):
+    Name = 'Shodan'
+
+    async def get_audio_for_room(self, context: RoomContext):
+        return [Look_At_You_Hacker, AI_Password]
 
 
 class Database(PathScene):
@@ -548,11 +553,30 @@ class Database(PathScene):
     Choices = {
         DatabasePassword(): {
             Path_Clavae: {
-                '02501': [Ghost(), DatabasePassword()],
+                '02501': Ghost(),
+                '00451': Shodan(),
                 '12610': DatabaseMenu(),
                 '*': DatabasePassword()
             }
         },
+        # MEMES
+        Ghost(): {
+            Path_Clavae: {
+                '02501': Ghost(),
+                '00451': Shodan(),
+                '12610': DatabaseMenu(),
+                '*': DatabasePassword()
+            }
+        },
+        Shodan(): {
+            Path_Clavae: {
+                '02501': Ghost(),
+                '00451': Shodan(),
+                '12610': DatabaseMenu(),
+                '*': DatabasePassword()
+            }
+        },
+        # /MEMES
         DatabaseMenu(): {
             Path_Clavae: {
                 '1': DatabaseClassified(),

@@ -51,7 +51,7 @@ class TeleRoom(Room):
             context.state = current_transitions[choice]
             self.d(f"new_player_choice({choice}) new state: {context.state}")
 
-    async def get_audio_for_room(self, context: RoomContext):
+    async def get_audio_for_room(self, context: RoomContext) -> Union[RSResource, List[RSResource]]:
         return await self.get_resource_for_path(context)
 
     async def get_resource_for_path(self, context: RoomContext):
@@ -77,8 +77,12 @@ class TeleRoom(Room):
         res = await self.get_audio_for_room(context)
         # Some rooms do not have audio and only exist to take actions and hang up on the player
         if res:
-            self.d(f'Got Audio Resource: {res}')
-            maybe_gather.play(res.url, loop=1)
+            self.d(f'Got Audio Resource(s): {res}')
+            if isinstance(res, list):
+                for r in res:
+                    maybe_gather.play(r.url, loop=1)
+            else:
+                maybe_gather.play(res.url, loop=1)
         else:
             vr = VoiceResponse()
             vr.hangup()
