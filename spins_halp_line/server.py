@@ -304,7 +304,7 @@ async def debug_start_game():
     return ""
 
 @app.route("/debug/trigger-climax", methods=["POST"])
-async def trigger_reduce():
+async def trigger_climax():
     req = TwilRequest(request)
     await req.load()
 
