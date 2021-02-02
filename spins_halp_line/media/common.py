@@ -18,7 +18,7 @@ Clavae_Final_Puzzle_Image_2 = RSResource(1090)
 Karen_Conference_Info = RSResource(1089)
 Clavae_Conference_Intro = RSResource(1074)
 
-Puppet_Master = RSResource(1096)
+Puppet_Master = RSResource(1098)
 
 Conference_Nudge = RSResource(1050)
 

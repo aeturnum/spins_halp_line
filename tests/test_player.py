@@ -1,11 +1,11 @@
 from spins_halp_line.player import ScriptInfo
-from spins_halp_line.util import Snapshot
+from spins_halp_line.util import StateCopy
 from spins_halp_line.resources.numbers import PhoneNumber
 
 
 async def test_player_object():
     si = ScriptInfo.from_dict({})
-    snap = Snapshot(si)
+    snap = StateCopy(si)
     test_value = "test"
 
     old_value = si.state_manager # probably None

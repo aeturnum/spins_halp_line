@@ -179,7 +179,7 @@ class LockManager(Logger):
             self.lock.release()
 
 
-# Helper class to restore a reference to a previous set of values (used to create psudo-transactions)
+# Helper class to restore a reference to a previous set of values (used to create pseudo-transactions)
 class StateCopy:
     def __init__(self, snap_of: Any):
         self._ref = snap_of
