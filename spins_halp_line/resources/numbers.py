@@ -2,8 +2,9 @@ import json
 import random
 from typing import Union, List, Dict, Optional
 
-import trio
 import phonenumbers
+import trio
+
 
 # Helper class to normalize number formats
 class PhoneNumber:
@@ -34,17 +35,23 @@ class PhoneNumber:
             return self.e164 == other.e164
         elif isinstance(other, str):
             if other == '*':
-                return True # We are always equal to '*'
+                return True  # We are always equal to '*'
             return self == PhoneNumber(other)
 
         return False
 
-    # todo: I keep fucking up and putting PhoneNumbers directly into dictionaries that will get serialized to JSON. Now, this should be an easy thing to handle - a PhoneNumber has a simple way to be serialized (.e164), but it doesn't seem like the standard `json` library has an interface on objects that it'll use to serialize non-standard things.# todo:
+    # todo: I keep fucking up and putting PhoneNumbers directly into dictionaries that will get serialized to JSON.
+    # todo: Now, this should be an easy thing to handle - a PhoneNumber has a simple way to be serialized (.e164),
+    # todo: but it doesn't seem like the standard `json` library has an interface on objects that it'll
+    # todo: use to serialize non-standard things.
 
     # todo: So, we have three options:
-    # todo: - add a central json helper file which we route all json encode / decode calls through, and which has a subclass of JsonEncoder that will handle phone numbers properly
-    # todo: - find another JSON library that *does* have a standardized serialize call that it'll call on objects it doesn't know how to seralize
-    # todo: - add code that checks to make sure we aren't adding non-basic objects to states (probably the hardest solution)
+    # todo: - add a central json helper file which we route all json encode / decode calls through, and which
+    # todo:   has a subclass of JsonEncoder that will handle phone numbers properly
+    # todo: - find another JSON library that *does* have a standardized serialize call that
+    # todo:   it'll call on objects it doesn't know how to seralize
+    # todo: - add code that checks to make sure we aren't adding non-basic
+    # todo:   objects to states (probably the hardest solution)
 
     def __hash__(self):
         return hash(self.e164)
@@ -72,9 +79,9 @@ class PhoneNumber:
     def __str__(self):
         return self.friendly
 
+
 # Singleton for loading and dispensing numbers and organizing capabilities
 class NumberLibrary:
-
     _Capabilities = {
         "voice",
         "sms",
@@ -83,8 +90,8 @@ class NumberLibrary:
 
     def __init__(self, number_file="./numbers.json"):
         self._file_path = number_file
-        self.master_index: List[str] = [] # raw list of phone numbers
-        self.capabilities: Dict[str, set] = {} # capabilities index
+        self.master_index: List[str] = []  # raw list of phone numbers
+        self.capabilities: Dict[str, set] = {}  # capabilities index
         self.labels: Dict[str, str] = {}
 
     async def load(self):
@@ -138,7 +145,7 @@ class NumberLibrary:
     def all_capabilities(self):
         return self.voice.union(self.sms).union(self.mms)
 
-    def random(self, capabilities:Optional[set]=None) -> PhoneNumber:
+    def random(self, capabilities: Optional[set] = None) -> PhoneNumber:
         if not capabilities:
             capabilities = self.voice
 

@@ -26,13 +26,11 @@ _conferences: List['TwilConference'] = []
 
 _conference_key = "spins_conference_list"
 
-
 Conf_Twiml_Path = "/conf/twiml/<c_number>"
 Conf_Status_Path = "/conf/status/<c_number>"
 
 
 class TwilConference(Logger):
-
     Event_Conference_Start = 'conference-start'
     Event_Participant_Join = 'participant-join'
     Event_Participant_Leave = 'participant-leave'
@@ -46,7 +44,7 @@ class TwilConference(Logger):
 
     # This function does not use the global conference lock because trio locks are not reentrant and
     # in theory that should be fine? We should only call this once a lock is established and EVEN IF WE DON'T,
-    # it will not be a problem because this is writing to the persistant database and those writes should be
+    # it will not be a problem because this is writing to the persistent database and those writes should be
     # ordered by redio
     @classmethod
     async def _save_conference_list(cls, locked=False):
@@ -77,7 +75,7 @@ class TwilConference(Logger):
             return TwilConference(int_id, from_num, participants, sid, started)
 
     @classmethod
-    async def create(cls, number:PhoneNumber, locked=None) -> 'TwilConference':
+    async def create(cls, number: PhoneNumber, locked=None) -> 'TwilConference':
         # global _conference_lock
         global _last_conference
 
@@ -87,7 +85,7 @@ class TwilConference(Logger):
 
             return TwilConference(new_id, number)
 
-    def __init__(self, id_, from_number:PhoneNumber, participants=None, sid=None, started=None):
+    def __init__(self, id_, from_number: PhoneNumber, participants=None, sid=None, started=None):
         super(TwilConference, self).__init__()
         if not participants:
             participants = {}
@@ -138,7 +136,7 @@ class TwilConference(Logger):
         elif isinstance(other, str):
             try:
                 return self.id == int(other)
-            except Exception:
+            except ValueError:
                 # fall out to default
                 pass
         elif isinstance(other, int):
@@ -162,23 +160,22 @@ class TwilConference(Logger):
     def __str__(self):
         return f'Conf[{self.from_number}|A:{self.active}]'
 
-
-# Headers:
-#   [...]
-# Body:
-#   Coaching: false
-#   FriendlyName: 2
-#   ParticipantLabel: +14156864014
-#   EndConferenceOnExit: false
-#   StatusCallbackEvent: participant-leave
-#   Timestamp: Thu, 14 Jan 2021 00:25:05 +0000
-#   StartConferenceOnEnter: true
-#   AccountSid: AC7196e8082e73460f6c5c961109940e6d
-#   SequenceNumber: 1
-#   ConferenceSid: CF68a65a63fd20c14069a0ec784858ecb0
-#   CallSid: CA3dbed34340ac3d3f530a3d72468d91fb
-#   Hold: false
-#   Muted: false
+    # Headers:
+    #   [...]
+    # Body:
+    #   Coaching: false
+    #   FriendlyName: 2
+    #   ParticipantLabel: +14156864014
+    #   EndConferenceOnExit: false
+    #   StatusCallbackEvent: participant-leave
+    #   Timestamp: Thu, 14 Jan 2021 00:25:05 +0000
+    #   StartConferenceOnEnter: true
+    #   AccountSid: AC7196e8082e73460f6c5c961109940e6d
+    #   SequenceNumber: 1
+    #   ConferenceSid: CF68a65a63fd20c14069a0ec784858ecb0
+    #   CallSid: CA3dbed34340ac3d3f530a3d72468d91fb
+    #   Hold: false
+    #   Muted: false
 
     # events:
     # last-participant-left: conference over
@@ -207,7 +204,7 @@ class TwilConference(Logger):
                 self.invited.append(PhoneNumber(participant))
                 dirty = True
 
-            if event_name == self.Event_Conference_Start: # conference start, mark time
+            if event_name == self.Event_Conference_Start:  # conference start, mark time
                 self.started = datetime.now()
                 dirty = True
 
@@ -242,9 +239,9 @@ class TwilConference(Logger):
         for handler in self._custom_handlers:
             await handler.event(self, event, participant)
 
-    async def add_participant(self, number_to_call: PhoneNumber, play_first: RSResource=None):
+    async def add_participant(self, number_to_call: PhoneNumber, play_first: RSResource = None):
 
-        # todo: figure out this whole async machine detection buisness
+        # todo: figure out this whole async machine detection business
         async with LockManager(_twil_lock):
             _twilio_client.calls.create(
                 # machine_detection='Enable',
@@ -259,7 +256,6 @@ class TwilConference(Logger):
             self._participating[number_to_call.e164] = self.Status_Invited
             self.intros[number_to_call.e164] = play_first.id
             await self._save_conference_list(True)
-
 
     async def play_sound(self, sound: RSResource):
         if not self.twil_sid:
@@ -310,6 +306,7 @@ async def new_conference(number: PhoneNumber) -> TwilConference:
         await TwilConference._save_conference_list(True)
 
     return new_conf
+
 
 async def load_conferences():
     async with LockManager(_conference_lock):

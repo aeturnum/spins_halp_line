@@ -10,9 +10,8 @@ from spins_halp_line.resources.numbers import PhoneNumber
 from spins_halp_line.player import ScriptInfo, Player
 from spins_halp_line.stories.story_objects import Room, RoomContext, Scene, Shard
 from spins_halp_line.stories.tele_constants import (
-    Telemarketopia_Name, _path, _ready_for_conf
+    Telemarketopia_Name, Key_path, Key_ready_for_conf
 )
-from spins_halp_line.tasks import add_task
 
 _player_in_first_conference = 'player_in_first_conference'
 _has_decision_text = 'player_has_decision_text'
@@ -139,7 +138,7 @@ class PathScene(Scene):
 
 class TelePlayer(Player):
 
-    Infinity = timedelta(days=3650) # 10 years
+    Infinity = timedelta(days=3650)  # 10 years
 
     @property
     def telemarketopia(self) -> Optional[dict]:
@@ -151,11 +150,11 @@ class TelePlayer(Player):
     # If the player has responded to our text asking them if they are ready
     @property
     def ready_for_conference(self):
-        return self.telemarketopia.get(_ready_for_conf, False)
+        return self.telemarketopia.get(Key_ready_for_conf, False)
 
     @ready_for_conference.setter
     def ready_for_conference(self, value):
-        self.telemarketopia[_ready_for_conf] = bool(value)
+        self.telemarketopia[Key_ready_for_conf] = bool(value)
 
     # If player is in final conference
     @property
@@ -187,11 +186,11 @@ class TelePlayer(Player):
     # The final choice the player makes after the conference
     @property
     def path(self) -> str:
-        return self.telemarketopia.get(_path, None)
+        return self.telemarketopia.get(Key_path, None)
 
     @path.setter
     def path(self, value):
-        self.telemarketopia[_path] = str(value)
+        self.telemarketopia[Key_path] = str(value)
 
     # The final choice the player makes after the conference
     @property
@@ -231,7 +230,7 @@ class TelePlayer(Player):
 
     async def reset_conference_flags(self):
         await self.clear([
-            _ready_for_conf, _in_final_final,
+            Key_ready_for_conf, _in_final_final,
             _player_in_first_conference, _partner
         ])
 

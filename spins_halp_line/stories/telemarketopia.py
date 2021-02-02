@@ -4,7 +4,7 @@ from twilio.twiml.voice_response import VoiceResponse
 
 from .tele_constants import (
     Telemarketopia_Name,
-    _ready_for_conf, _path,
+    Key_ready_for_conf, Key_path,
     Path_Clavae, Path_Karen,
     Clavae1, Clavae2,
     Karen1, Karen2,
@@ -20,7 +20,6 @@ from .story_objects import (
     ScriptInfo,
     TextHandler
 )
-
 
 from spins_halp_line.util import Logger, LockManager
 from spins_halp_line.tasks import add_task
@@ -38,13 +37,12 @@ from spins_halp_line.constants import (
 )
 
 
-
 class ConferenceChecker(TextHandler):
 
     async def first_conf_text(self, text_request: TwilRequest, caller: TelePlayer):
         self.d(f'new_text({caller}) - player is agreeing to conf?')
         # only set if they are not yet in their first conference
-        caller.timestamp(_ready_for_conf)
+        caller.timestamp(Key_ready_for_conf)
         return caller
 
     async def first_conf_choice(self, text_request: TwilRequest, caller: TelePlayer):
@@ -100,21 +98,25 @@ class ConferenceChecker(TextHandler):
         elif text_request.num_called == Global_Number_Library.from_label('final'):
             return await self.final_answer_text(text_request, caller)
         else:
-            self.w(f'Do not know what to do with: [From:{caller}] -> {text_request.num_called}: {text_request.text_body})')
+            self.w(
+                f'Do not know what to do with: [From:{caller}] -> {text_request.num_called}: {text_request.text_body})'
+            )
 
         return caller
 
 
 # subclass to handle our specific needs around conferences
 class ConferenceEventHandler(Logger):
-    async def save_state_for_start(self, partipant: PhoneNumber, partner: PhoneNumber):
-        player = TelePlayer(partipant.e164)
+
+    @staticmethod
+    async def save_state_for_start(participant: PhoneNumber, partner: PhoneNumber):
+        player = TelePlayer(participant.e164)
         await player.load()
         player.player_in_first_conference = True
         player.partner = partner.e164
         await player.save()
 
-    async def event(self, conference:TwilConference, event: str, participant: str):
+    async def event(self, conference: TwilConference, event: str, participant: str):
         self.d(f"Got conference event: {conference}:{event}!")
         # first conference
         if conference.from_number.e164 == Global_Number_Library.from_label('conference'):
@@ -160,7 +162,7 @@ class TeleStateManager(ScriptStateManager):
 
     def _make_shard(self) -> TeleShard:
         d = self._state_dict
-        d.pop('version', None) # remove version
+        d.pop('version', None)  # remove version
         d.pop('generation', None)  # remove version
         ts = TeleShard(**d)
         ts.set_parent(self)
@@ -171,7 +173,8 @@ class TeleStateManager(ScriptStateManager):
     def state(self) -> TeleState:
         return self._state
 
-    def filter_list(self, player_list: List, player_set: Set):
+    @staticmethod
+    def filter_list(player_list: List, player_set: Set):
         result = []
         added = set()
 
@@ -185,7 +188,7 @@ class TeleStateManager(ScriptStateManager):
 
         return result
 
-    def remove_dupes(self, player_list, player_set = None):
+    def remove_dupes(self, player_list, player_set=None):
         if not player_set:
             player_set = set()
         clean_list = []
@@ -258,7 +261,6 @@ class TeleStateManager(ScriptStateManager):
 
             await self.save_to_redis(True)
 
-
     async def do_reduce(self, state: TeleState, shard: TeleShard):
         # todo: think about doing something about how recently players have been active?
         # todo: players who have been out for a while might not want to play
@@ -303,9 +305,8 @@ class TeleStateManager(ScriptStateManager):
                     self.d(f'Stale reference to "{player}" found in {state_list}! - removing')
                     state_list.remove(number_str)
 
-            path = None
-            if _path in args:
-                path = args[_path]
+            if Key_path in args:
+                path = args[Key_path]
             else:
                 if len(state.clavae_players) <= len(state.karen_players):
                     path = Path_Clavae
@@ -319,12 +320,13 @@ class TeleStateManager(ScriptStateManager):
 
             # set path!
             self.d(f'Assigning {player} to path {path}!')
-            script_info.data[_path] = path
+            script_info.data[Key_path] = path
 
             await self.save_to_redis(True)
 
     def __str__(self):
         return f'TeleSM'
+
 
 class TipLineStart(TeleRoom):
     Name = "Tip Line Start"
@@ -375,6 +377,7 @@ class TipLineTip2(TeleRoom):
 
 class TipLineClavae(TeleRoom):
     Name = "Tip Line Clavae"
+    Gather = False
 
     async def get_audio_for_room(self, context: RoomContext):
         await send_text(Clavae1, context.player.number)
@@ -399,7 +402,7 @@ class TipLineScene(PathScene):
                 '*': TipLineStart()
             }
         },
-        TipLineRecruit() : {
+        TipLineRecruit(): {
             Path_Karen: {
                 '5': TipLineQuiz1()
             }
@@ -415,9 +418,9 @@ class TipLineScene(PathScene):
             }
         },
         TipLineQuiz3(): {
-          Path_Karen: {
-              '*': TipLineQuizResults()
-          }
+            Path_Karen: {
+                '*': TipLineQuizResults()
+            }
         },
         TipLineQuizResults(): {
             Path_Karen: {
@@ -447,7 +450,7 @@ class KarenInitiation(TeleRoom):
 
 
 class KarenAccepted(TeleRoom):
-    Name = "Accepted Initialaiton"
+    Name = "Accepted Initiation"
     Gather = False
 
     async def get_audio_for_room(self, context: RoomContext):
@@ -467,9 +470,10 @@ class ClavaeAppeal(TeleRoom):
 
 class ClavaeAccept(TeleRoom):
     Name = "First Clavae Accepted"
+    Gather = False
 
     async def get_audio_for_room(self, context: RoomContext):
-        await send_text(Clavae2, context.player.number)
+        await send_text(Clavae2, context.player.number, delay=20)
         return await self.get_resource_for_path(context)
 
 
@@ -484,6 +488,7 @@ class ClavaeAsksForHelp(PathScene):
             }
         }
     }
+
 
 class DatabasePassword(TeleRoom):
     Name = "Database Password"
@@ -516,6 +521,7 @@ class DatabaseAINewDepartures(TeleRoom):
 
 class DatabaseAIThirdCall(TeleRoom):
     Name = "Database AI Third Call"
+    Gather = False
 
     async def get_audio_for_room(self, context: RoomContext):
         context.shard.append('clave_waiting_for_conf', context.player.number.e164)
@@ -562,7 +568,7 @@ class Database(PathScene):
                 '*': DatabaseMenu()
             }
         },
-        DatabaseAIStart() : {
+        DatabaseAIStart(): {
             Path_Clavae: {
                 '1': DatabaseAINewArrivals(),
                 '2': DatabaseAINewDepartures(),
@@ -583,23 +589,25 @@ class Database(PathScene):
         }
     }
 
+
 # name is INTENTIONALLY wrong
 class TelemarketopiaPreOath(TeleRoom):
     Name = "Telemarketopia Oath"
 
 
 # name is INTENTIONALLY wrong
-class TelemarketopiOath(TeleRoom):
+class TelemarketopiaOath(TeleRoom):
     Name = "Telemarketopia Promotion 1"
 
 
 # name is INTENTIONALLY wrong
-class TelemarketopiAcceptPromo(TeleRoom):
+class TelemarketopiaAcceptPromo(TeleRoom):
     Name = "Telemarketopia Accept Recruit"
 
 
-class TelemarketopiQueueForConf(TeleRoom):
+class TelemarketopiaQueueForConf(TeleRoom):
     Name = "Telemarketopia Karen Queue For Conf"
+    Gather = False
 
     async def get_audio_for_room(self, context: RoomContext):
         context.shard.append('karen_waiting_for_conf', context.player.number.e164)
@@ -613,20 +621,20 @@ class TelemarketopiaPromotionScene(PathScene):
     Choices = {
         TelemarketopiaPreOath(): {
             Path_Karen: {
-                '1': TelemarketopiOath(),
+                '1': TelemarketopiaOath(),
                 '*': TelemarketopiaPreOath()
             }
         },
-        TelemarketopiOath(): {
+        TelemarketopiaOath(): {
             Path_Karen: {
-                '1': TelemarketopiAcceptPromo(),
-                '*': TelemarketopiOath()
+                '1': TelemarketopiaAcceptPromo(),
+                '*': TelemarketopiaOath()
             }
         },
-        TelemarketopiAcceptPromo(): {
+        TelemarketopiaAcceptPromo(): {
             Path_Karen: {
-                '1': TelemarketopiQueueForConf(),
-                '*': TelemarketopiAcceptPromo()
+                '1': TelemarketopiaQueueForConf(),
+                '*': TelemarketopiaAcceptPromo()
             }
         },
     }
@@ -636,6 +644,7 @@ Path_Assigned = "State_Path_Assigned"
 Second_Call_Done = "State_Second_Call_Done"
 Third_Call_Done = "State_Waiting_For_Conference"
 
+
 # todo: Put a function into Script that will handle texts that we get from twilio
 # todo: Then we need a method of updating player state and also updating shared script state
 # todo: Maybe we do this with one huge function that we run
@@ -644,18 +653,22 @@ Third_Call_Done = "State_Waiting_For_Conference"
 
 class PleaseWaitRoom(TeleRoom):
     Name = "Please Wait Room"
-    
+
     async def action(self, context: RoomContext):
         self.d(f"action() context: {context}")
         response = VoiceResponse()
-        response.say("Thank you for expressing your interest in more Telemarketopia! You will get more Telemarketopia shortly.")
+        response.say(
+            "Thank you for your interest in Telemarketopia! You will get more Telemarketopia shortly."
+        )
 
         return response
+
 
 class PleaseWaitScene(PathScene):
     Name = "PleaseWaitScene"
     Start = [PleaseWaitRoom()]
     Choices = {}
+
 
 PleaseWaitSceneAndState = SceneAndState(PleaseWaitScene(), Script_Ignore_Change)
 

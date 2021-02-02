@@ -11,7 +11,7 @@ from spins_halp_line.constants import Root_Url, Credentials
 from spins_halp_line.media.common import Conference_Nudge, Clavae_Conference_Intro, Karen_Conference_Info
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.stories.tele_constants import (
-    _ready_for_conf,
+    Key_ready_for_conf,
     ConfUnReadyIfReply, ConfUnReadyIfNoReply, ConfReady, ConfReadyTwo,
     CFinalPuzzle1, KFinalPuzzle1, CFinalPuzzle2, KFinalPuzzle2
 )
@@ -25,8 +25,6 @@ from spins_halp_line.tasks import Task, add_task
 # | |    / _ \| '_ \|  _/ _ \ '__/ _ \ '_ \ / __/ _ \  _   | | | | | '_ \| |/ /
 # | |___| (_) | | | | ||  __/ | |  __/ | | | (_|  __/ | |__| | |_| | | | |   <
 #  \_____\___/|_| |_|_| \___|_|  \___|_| |_|\___\___|  \____/ \__,_|_| |_|_|\_\
-
-
 
 
 # Create object that:
@@ -65,7 +63,7 @@ class StoryInfo:
 
 
 class ConferenceTask(Task):
-    def __init__(self, info: StoryInfo, delay: int=0, conf: TwilConference = None):
+    def __init__(self, info: StoryInfo, delay: int = 0, conf: TwilConference = None):
         super(ConferenceTask, self).__init__(delay)
         self.info = info
         self.conference: Optional[TwilConference] = conf
@@ -81,13 +79,14 @@ class ConferenceTask(Task):
         # cheeck to make sure we've seen them within last 10 mins
         time_limit = timedelta(minutes=10)
 
-        clavae_time_passed = self.info.clv_p.time_passed(_ready_for_conf)
-        karen_time_passed = self.info.kar_p.time_passed(_ready_for_conf)
+        clavae_time_passed = self.info.clv_p.time_passed(Key_ready_for_conf)
+        karen_time_passed = self.info.kar_p.time_passed(Key_ready_for_conf)
 
         # self.d(f'check_player_status({self.info}) -> {clavae_ready}, {karen_ready}')
         return clavae_time_passed < time_limit, karen_time_passed < time_limit
 
-    async def start_child_task(self, task):
+    @staticmethod
+    async def start_child_task(task):
         await add_task.send(task)
 
     async def execute(self):
@@ -97,7 +96,7 @@ class ConferenceTask(Task):
     async def execute_conference_action(self):
         pass
 
-    async def start_conference(self, clav_media = None, karen_media = None):
+    async def start_conference(self, clav_media=None, karen_media=None):
         from_number = Global_Number_Library.from_label('conference')
         self.conference = await new_conference(from_number)
 
@@ -189,7 +188,6 @@ class ConnectFirstConference(ConferenceTask):
 
 
 class ConfWaitForPlayers(ConferenceTask):
-
     _wait_before_retext = 60 * 5
     _wait_before_give_up = 60 * 10
 
@@ -198,7 +196,7 @@ class ConfWaitForPlayers(ConferenceTask):
         time_elapsed: int = 0
         text_counts: Dict[str, int] = field(default_factory=dict)  # the only field exposed to Rooms
 
-    def __init__(self, info:StoryInfo, delay:int=0, ongoing_state: ConfWaitForPlayersState=None):
+    def __init__(self, info: StoryInfo, delay: int = 0, ongoing_state: ConfWaitForPlayersState = None):
         super(ConfWaitForPlayers, self).__init__(info, delay)
         if ongoing_state is None:
             ongoing_state = self.ConfWaitForPlayersState(0, {info.k_num.e164: 1, info.c_num.e164: 1})
@@ -219,7 +217,6 @@ class ConfWaitForPlayers(ConferenceTask):
         await self.maybe_send_text(k_r, self.info.k_num)
 
         self.d(f"e_c_a(): {c_r=}, {k_r=}!")
-        task_to_start = None
         if not c_r or not k_r:
             self.d(f"e_c_a(): someone isn't ready!")
             if self.state.time_elapsed < self._wait_before_give_up:
@@ -294,7 +291,7 @@ class DestroyTelemarketopia(Task):
 
 class MakeClimaxCallsTask(Task):
 
-    def __init__(self, clavae_num: PhoneNumber, clav_choice:str, karen_num:PhoneNumber, karen_choice:str):
+    def __init__(self, clavae_num: PhoneNumber, clav_choice: str, karen_num: PhoneNumber, karen_choice: str):
         super(MakeClimaxCallsTask, self).__init__()
         self.clavae_num = clavae_num
         self.clav_choice = clav_choice
@@ -330,7 +327,7 @@ class MakeClimaxCallsTask(Task):
 
 
 class SendFinalFinalResult(Task):
-    def __init__(self, clavae_num: PhoneNumber, karen_num:PhoneNumber, got_right_answer: bool):
+    def __init__(self, clavae_num: PhoneNumber, karen_num: PhoneNumber, got_right_answer: bool):
         super(SendFinalFinalResult, self).__init__()
         self.got_right_answer = got_right_answer
         self.clavae_num = clavae_num

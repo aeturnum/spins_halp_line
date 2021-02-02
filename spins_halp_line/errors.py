@@ -1,9 +1,10 @@
 import traceback
 
+
 class WrapException(Exception):
     _NAME = "WrapException"
 
-    def __init__(self, message, wrapped_exception:Exception=None):
+    def __init__(self, message, wrapped_exception: Exception=None):
         super(WrapException, self).__init__()
         self._message = message
         self.wrapped_exception = wrapped_exception
@@ -19,6 +20,7 @@ class WrapException(Exception):
 
     def __str__(self):
         return self.message
+
 
 class StoryNavigationException(WrapException):
     _NAME = "StoryNavigationException"

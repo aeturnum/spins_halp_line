@@ -13,7 +13,6 @@ _twilio_client: rest.Client = rest.Client(Credentials["twilio"]["sid"], Credenti
 _twil_lock = trio.Lock()
 
 
-
 # todo: This is the source of the following error during the tests:
 # Error in atexit._run_exitfuncs:
 # Traceback (most recent call last):
@@ -53,14 +52,14 @@ _twil_lock = trio.Lock()
 #         media_url=media_url
 #     )
 
-def _do_send_sms(client, frm:str, to:str, msg:str, m_url=values.unset):
-    client.messages.create(body=msg,from_=frm,to=to,media_url=m_url)
+def _do_send_sms(client, frm: str, to: str, msg: str, m_url=values.unset):
+    client.messages.create(body=msg, from_=frm, to=to, media_url=m_url)
 
 
 async def send_sms(
-        from_number:PhoneNumber,
-        to_number:PhoneNumber,
-        message:str,
+        from_number: PhoneNumber,
+        to_number: PhoneNumber,
+        message: str,
         media_url=values.unset,
         client=None
 ):
@@ -85,6 +84,7 @@ async def send_sms(
                 message,
                 media_url
             )
+
 
 async def make_call(to_num: PhoneNumber, from_num: PhoneNumber, callback_url: str):
     global _twilio_client
@@ -121,6 +121,7 @@ class TextTask(Task):
             self.Text,
             image
         )
+
 
 async def send_text(TextClass, player_numer: PhoneNumber, delay=0):
     await add_task.send(TextClass(player_numer, delay))

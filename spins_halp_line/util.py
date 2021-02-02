@@ -1,21 +1,21 @@
 import logging
-from typing import Union, Optional, IO, Any
 from copy import deepcopy
+from typing import Union, Optional, IO, Any
 
-import trio
 import hypercorn.logging as hyplog
+import trio
 
 logging.basicConfig(level=logging.DEBUG)
 
 
 # modified version of create logger
 def our_create_logger(
-    name: str,
-    target: Union[logging.Logger, str, None],
-    level: Optional[str],
-    sys_default: IO,
-    *,
-    propagate: bool = True,
+        name: str,
+        target: Union[logging.Logger, str, None],
+        level: Optional[str],
+        sys_default: IO,
+        *,
+        propagate: bool = True,
 ) -> Optional[logging.Logger]:
     if isinstance(target, logging.Logger):
         return target
@@ -37,6 +37,7 @@ def our_create_logger(
     else:
         return None
 
+
 class OurLogger(hyplog.Logger):
 
     async def access(self, request, response, request_time: float) -> None:
@@ -45,6 +46,7 @@ class OurLogger(hyplog.Logger):
                 self.access_logger.info(
                     self.access_log_format, self.atoms(request, response, request_time)
                 )
+
 
 # sample log from the hypercorn code:
 # await self.config.log.access(
@@ -56,7 +58,9 @@ def do_monkey_patches():
     hyplog._create_logger = our_create_logger
     hyplog.Logger.access = OurLogger.access
 
+
 _logger = None
+
 
 def get_logger():
     global _logger
@@ -70,7 +74,7 @@ def get_logger():
 
         logger = logging.getLogger("spins")
         # https://stackoverflow.com/questions/19561058/duplicate-output-in-simple-python-logging-configuration/19561320#19561320
-        logger.propagate = False # prevent double logs
+        logger.propagate = False  # prevent double logs
         logger.handlers.clear()
         logger.addHandler(stream_formatter)
         _logger = logger
@@ -88,16 +92,17 @@ class Logger(object):
         return f' {level}|{self}: {line}'
 
     def e(self, line):
-        self._log.error(self._log_line('E',line), stacklevel=2)
+        self._log.error(self._log_line('E', line), stacklevel=2)
 
     def w(self, line):
-        self._log.warning(self._log_line('W',line), stacklevel=2)
+        self._log.warning(self._log_line('W', line), stacklevel=2)
 
     def d(self, line):
-        self._log.debug(self._log_line('D',line), stacklevel=2)
+        self._log.debug(self._log_line('D', line), stacklevel=2)
 
     def __str__(self):
         return str(self.__class__)
+
 
 async def pretty_print_request(r, label=""):
     s = []
@@ -129,6 +134,7 @@ async def pretty_print_request(r, label=""):
 
     print("\n".join(s))
 
+
 class SynchedCache(Logger):
 
     def __init__(self):
@@ -150,10 +156,10 @@ class SynchedCache(Logger):
 # Helper class to ease the demands on trio.Lock state tracking
 class LockManager(Logger):
 
-    def __init__(self, lock, already_locked = False):
+    def __init__(self, lock, already_locked=False):
         super(LockManager, self).__init__()
 
-        self.lock : trio.Lock = lock
+        self.lock: trio.Lock = lock
         self.expect_locked = already_locked
 
     def __enter__(self):
@@ -171,6 +177,7 @@ class LockManager(Logger):
     async def __aexit__(self, exc_type, exc, tb):
         if not self.expect_locked:
             self.lock.release()
+
 
 # Helper class to restore a reference to a previous set of values (used to create psudo-transactions)
 class StateCopy:

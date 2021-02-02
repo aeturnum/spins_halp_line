@@ -1,11 +1,11 @@
-from dataclasses import dataclass, field, asdict
 import json
+from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, Optional, List, Union
 
-from spins_halp_line.util import Logger
-from spins_halp_line.resources.redis import new_redis
-from spins_halp_line.resources.numbers import PhoneNumber
 from spins_halp_line.constants import Script_New_State, Script_End_State
+from spins_halp_line.resources.numbers import PhoneNumber
+from spins_halp_line.resources.redis import new_redis
+from spins_halp_line.util import Logger
 
 
 @dataclass
@@ -28,6 +28,7 @@ class RoomInfo:
 
     def __str__(self):
         return f'RoomInfo[{self.name}]'
+
 
 @dataclass
 class SceneInfo:
@@ -110,6 +111,7 @@ class ScriptInfo:
     def __str__(self):
         return f'ScriptInfo[{self.state}]{self.scene_history}] -> {list(self.scene_states.keys())}'
 
+
 # We could add player information but this may not be the way to do it
 # todo: think about what information we want to store at a global level for a player
 #
@@ -146,20 +148,20 @@ class ScriptInfo:
 # todo:
 # todo: Eventually, I think we should transform the single monolithic storage into a more modular systems
 # todo: which are loaded and saved seperately:
-# todo: - room / scene location tracking section (like now but w/o `data` members) (plr:+14156864014:telemarketopia:position)
+# todo: - room / scene location tracking section
+# todo:     (like now but w/o `data` members) (plr:+14156864014:telemarketopia:position)
 # todo: - script / scene / room storage (plr:+14156864014:telemarketopia:reg)
 # todo: - events associated with player & script (plr:+14156864014:telemarketopia:event:<name>)
 
 
 class Player(Logger):
-
     _info = 'info'
     _scripts_key = 'scripts'
     _generation_key = 'generation'
     _version_key = 'version'
 
     @classmethod
-    async def _get_player_keys(cls, db = None) -> List[str]:
+    async def _get_player_keys(cls, db=None) -> List[str]:
         # This is a bad method, but I'm not sure how to make it better. There is no documentation in redio about
         # how to specify a filter in scan (which redis supports but we'd need to format properly) and, in any
         # case, a filter would still get all keys first but only give friendly some of them. Hopefully a minor
@@ -169,8 +171,8 @@ class Player(Logger):
         cursor = "0"
         players = []
         while True:
-            scan = await db.scan(cursor) # don't use autodecode here because the cursor should stay a string I think?
-            cursor = scan[0].decode("utf-8") # scan returns bytes
+            scan = await db.scan(cursor)  # don't use autodecode here because the cursor should stay a string I think?
+            cursor = scan[0].decode("utf-8")  # scan returns bytes
             these_players = [entry.decode("utf-8") for entry in scan[1] if entry[0:4] == b'plr:']
             # for entry in these_players:
             #     print(entry)
@@ -188,7 +190,6 @@ class Player(Logger):
         players = await cls._get_player_keys(db)
         result = {}
         for player in players:
-
             play_dict = await db.get(player).autodecode
             result[player] = play_dict
 
@@ -213,7 +214,6 @@ class Player(Logger):
 
     def __init__(self, number: Union[str, PhoneNumber]):
         super(Player, self).__init__()
-        global _redis
         self.number = PhoneNumber(number)
         self._generation = 0
         self._db = new_redis()
@@ -311,7 +311,6 @@ class Player(Logger):
                     f"Warning: Sync problem detected: {self.data}\n>>>overwriting>>>>\n{jsn}"
                 )
 
-
         self._version += 1
         await self._db.set(self.key, json.dumps(self.data))
         self.d(f"save(): {self.key} <- {json.dumps(self.data)}")
@@ -336,6 +335,7 @@ class Player(Logger):
 
     def __str__(self):
         return f"Plr[{self.number.friendly}]({self._version})"
+
 
 #
 #  _____       _                        _             _

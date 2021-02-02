@@ -2,12 +2,11 @@ from functools import wraps
 from typing import Set
 
 import trio
-
 from trio import MemorySendChannel
-
 
 # https://gitlab.com/pgjones/quart/-/blob/master/examples/websocket/websocket.py
 event_websocket_channels: Set[MemorySendChannel] = set()
+
 
 def event_websocket(func):
     @wraps(func)
@@ -21,6 +20,7 @@ def event_websocket(func):
             event_websocket_channels.remove(add_event)
 
     return wrapper
+
 
 async def send_event(text: str):
     global event_websocket_channels

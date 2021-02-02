@@ -1055,6 +1055,7 @@ class Script(Logger):
 
         if scene_state is None:
             self.e(f'!!!\n!!!\nCould not get Scene for: {request.num_called} by {player.number}')
+            snapshot.save()
             return error_response()
 
         scene = scene_state.scene

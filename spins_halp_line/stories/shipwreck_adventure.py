@@ -2,12 +2,13 @@ from typing import Dict
 
 from twilio.twiml.voice_response import VoiceResponse
 
-from .story_objects import Room, Scene, Script, SceneAndState, RoomContext, ScriptStateManager
 from spins_halp_line.constants import (
     Script_New_State,
     Script_Any_Number,
     Script_End_State
 )
+from .story_objects import Room, Scene, Script, SceneAndState, RoomContext, ScriptStateManager
+
 
 #  _____
 # |  __ \
@@ -59,6 +60,7 @@ class AdventureRoom(Room):
 
         return response
 
+
 class ShipwreckYardFront(AdventureRoom):
     Name = "Shipwreck Yard Front"
 
@@ -96,10 +98,10 @@ class ShipwreckYardShip(AdventureRoom):
 
         if not context.state:
             text += (
-            "You stand next to a sculpture of a ship. It's sprinkled in leaves and needles. "
-            "You can see that its walls are thinner than you thought at a distance. "
-            "It doesn't look that comfortable but the design is striking. " 
-            "You can now see a side door next to the construction area. "
+                "You stand next to a sculpture of a ship. It's sprinkled in leaves and needles. "
+                "You can see that its walls are thinner than you thought at a distance. "
+                "It doesn't look that comfortable but the design is striking. "
+                "You can now see a side door next to the construction area. "
             )
         elif context.state == "Ship_Push":
             if context.state_is_new:
@@ -112,7 +114,7 @@ class ShipwreckYardShip(AdventureRoom):
             text += (
                 "You stand next to a sculpture of a ship lying on its side. "
                 "It's sprinkled in leaves and needles and its bow is broken. "
-                "You feel bad about pushing it over. " 
+                "You feel bad about pushing it over. "
                 "You can now see a side door next to the construction area. "
             )
         elif context.state == "Ship_Fix":
@@ -147,6 +149,7 @@ class ShipwreckYardShip(AdventureRoom):
 
         return choices
 
+
 class ShipwreckYardSide(AdventureRoom):
     Name = "Shipwreck Yard Side"
 
@@ -167,7 +170,7 @@ class ShipwreckYardSide(AdventureRoom):
             )
         elif context.state == "Fire_On":
             if context.state_is_new:
-                text +=  "You light the propane burner and it whooshes up into a cheery fire. "
+                text += "You light the propane burner and it whooshes up into a cheery fire. "
 
             text += (
                 "You're standing in front of a propane fire pit. It's lit, but the fire doesn't cast much "
@@ -196,14 +199,15 @@ class ShipwreckYardSide(AdventureRoom):
 
         return choices
 
+
 class ShipwreckLaundry(AdventureRoom):
     Name = "Shipwreck Laundry Room"
 
     async def description(self, context: RoomContext) -> str:
         return (
-            "You stand in a cluttered storage room. A washer and dryer are stacked in the corner, opposite an exercise "
-            "machine. Someone is doing a load of laundry. There's another door that leads further into the house and the "
-            "door leading back out to the yard."
+            "You stand in a cluttered storage room. A washer and dryer "
+            "are stacked in the corner, opposite an exercise machine. Someone is doing a load of laundry. "
+            "There's another door that leads further into the house and the door leading back out to the yard."
         )
 
     async def choices(self, context: RoomContext) -> Dict[str, str]:
@@ -211,6 +215,7 @@ class ShipwreckLaundry(AdventureRoom):
             "1": "Walk out to the side yard.",
             "2": "Go into the living room."
         }
+
 
 class ShipwreckLivingRoom(AdventureRoom):
     Name = "Shipwreck Living Room"
@@ -230,6 +235,7 @@ class ShipwreckLivingRoom(AdventureRoom):
             "4": "Walk up the stairs"
         }
 
+
 class ShipwreckKitchen(AdventureRoom):
     Name = "Shipwreck Kitchen"
 
@@ -247,6 +253,7 @@ class ShipwreckKitchen(AdventureRoom):
             "1": "Walk out of the door into the yard.",
             "2": "Go into the living room."
         }
+
 
 class ShipwreckLanding(AdventureRoom):
     Name = "Shipwreck Landing"
@@ -299,6 +306,7 @@ class ShipwreckEnding(AdventureRoom):
     async def choices(self, context: RoomContext) -> Dict[str, str]:
         return {}
 
+
 #   _____
 #  / ____|
 # | (___   ___ ___ _ __   ___  ___
@@ -317,13 +325,13 @@ class ShipwreckScene(Scene):
             "4": ShipwreckEnding()
         },
         ShipwreckYardSide(): {
-          "1": ShipwreckKitchen(),
-          "2": ShipwreckYardFront(),
-          "3": ShipwreckYardSide()
+            "1": ShipwreckKitchen(),
+            "2": ShipwreckYardFront(),
+            "3": ShipwreckYardSide()
         },
         ShipwreckKitchen(): {
-          "1": ShipwreckYardSide(),
-          "2": ShipwreckLivingRoom()
+            "1": ShipwreckYardSide(),
+            "2": ShipwreckLivingRoom()
         },
         ShipwreckYardShip(): {
             "1": ShipwreckYardFront(),

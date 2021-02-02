@@ -1,5 +1,6 @@
 import redio
 
+
 # holds the class that manages the player info in redis
 # todo: Consider using a single coroutine to do all loading and storing of players so that
 # todo: we can detect if a player is getting race condition'd (i.e. there are two copies of them)

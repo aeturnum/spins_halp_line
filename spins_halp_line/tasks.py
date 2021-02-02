@@ -1,7 +1,9 @@
-import trio
 import traceback
 
+import trio
+
 from spins_halp_line.util import Logger
+
 
 class Task(Logger):
     _re_raise_exceptions = False
@@ -43,7 +45,9 @@ class GitUpdate(Task):
         result = await trio.run_process("./pull_git.sh", shell=True)
         print(result)
 
+
 add_task, _get_task = trio.open_memory_channel(50)
+
 
 async def Trio_Task_Task_Object_Runner():
     global _get_task

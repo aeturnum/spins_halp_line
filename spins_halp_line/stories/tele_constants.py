@@ -1,6 +1,6 @@
+from spins_halp_line.actions.twilio import TextTask
 from spins_halp_line.media.common import Clavae_Puzzle_Image_1, Karen_Puzzle_Image_1, Telemarketopia_Logo, \
     Clavae_Final_Puzzle_Image_1, Clavae_Final_Puzzle_Image_2, Karen_Final_Puzzle_Image_1, Karen_Final_Puzzle_Image_2
-from spins_halp_line.actions.twilio import TextTask
 
 
 #
@@ -47,6 +47,7 @@ class ConfReady(TextTask):
     Text = "HEY!\nHey.\nI've got that person you wanted to talk to! Just text back anything when you're ready!!"
     From_Number_Label = 'conference'
     Image = Telemarketopia_Logo
+
 
 class ConfReadyTwo(TextTask):
     Text = "Are you still there? Send me any text at all back to us if you're ready and, if you aren't ready now, we'll try again later."
@@ -125,5 +126,5 @@ Path_Clavae = 'Clavae'
 Path_Karen = 'Karen'
 
 # _got_text = 'got_text'
-_ready_for_conf = 'player_responded_to_conf_invite'
-_path = 'path'
+Key_ready_for_conf = 'player_responded_to_conf_invite'
+Key_path = 'path'

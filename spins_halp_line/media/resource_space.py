@@ -1,10 +1,8 @@
-import urllib.parse
 import hashlib
 import json
-
+import urllib.parse
 from typing import Union, Dict
 
-import trio
 import asks
 from asks.response_objects import Response
 
@@ -118,6 +116,7 @@ _l = get_logger()
 # static cache
 _global_cache = SynchedCache()
 
+
 class RSResource(object):
 
     @classmethod
@@ -148,7 +147,6 @@ class RSResource(object):
 
         return result
 
-
     _k_id = 'ref'
     _k_ext = 'file_extension'
     _k_ui_title = 'field8'
@@ -176,7 +174,7 @@ class RSResource(object):
         '4': 'audio'
     }
 
-    def __init__(self, data: Union[Dict[str,str], str, int]):
+    def __init__(self, data: Union[Dict[str, str], str, int]):
         global _global_cache
         self._cache = _global_cache
         self._data = {}
@@ -197,6 +195,7 @@ class RSResource(object):
         cache_key = self.id
 
         # support caching results
+        # todo: this cache doesn't work
         data = await self._cache.get(cache_key)
         print(f'loading resource {self.id}')
         if data is None:
@@ -373,81 +372,3 @@ class RSResource(object):
 
     def __repr__(self):
         return str(self)
-
-
-# def _check_creds():
-#     global _cred_key
-#     if _cred_key not in Credentials:
-#         return False
-#
-#     return True
-#
-# async def _do_get(function, params):
-#     if not _check_creds():
-#         _l.error(f"Do not have credentials loaded for {_cred_key}")
-#         return {}
-#
-#     base_url = Credentials[_cred_key][_base_url]
-#
-#     params['function'] = function
-#     params['user'] = Credentials[_cred_key][_user]
-#     qstring = urllib.parse.urlencode(params)
-#
-#     secret = Credentials[_cred_key][_secret]
-#     print(secret)
-#     print(qstring)
-#     signer = hashlib.sha256()
-#     signer.update(f'{secret}{qstring}'.encode("utf-8"))
-#
-#     request = f'{base_url}?{qstring}&sign={signer.hexdigest()}'
-#     result = await asks.get(request)
-#     # print("-" * 60)
-#     # print(request)
-#     # print(">" * 5)
-#     # print(result)
-#     # print("\\/" * 5)
-#     # print(result.content.decode("utf-8"))
-#     # print("-" * 60)
-#     return result
-#
-#
-#
-# async def search(term) -> Response:
-#     return await _do_get(
-#         'do_search',
-#         {
-#             'search': term
-#         }
-#     )
-#
-# async def get_resource_field_data(id) -> Response:
-#     return await _do_get(
-#         'get_resource_field_data',
-#         {
-#             'resource': id
-#         }
-#     )
-#
-# async def get_resource_data(id) -> Response:
-#     return await _do_get(
-#         'get_resource_data',
-#         {
-#             'resource': id
-#         }
-#     )
-#
-# # https://profspins.free.resourcespace.com/pages/download.php?ref=1001&size=&ext=mp3&k=&alternative=-1&usage=-1&usagecomment=
-# async def get_url(id, extension = "mp3") -> Response:
-#     # https://www.resourcespace.com/knowledge-base/api/get_resource_path
-#     # note: the $resource argument is actually called $ref
-#     return await _do_get(
-#         'get_resource_path',
-#         {
-#             'ref': id,
-#             'getfilepath': 0,
-#             'extension': extension,
-#             # 'generate': True,
-#             # 'alternative': -1,
-#             # 'size': ''
-#         }
-#     )
