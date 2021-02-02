@@ -1018,7 +1018,7 @@ class Script(Logger):
             await self._handle_exception(request, e, snapshot)
 
     async def start_game_for_player(self, player, args: dict=None):
-        self.d(f'start_game_for_player({player}): Previous script completed or we need a new one.')
+        self.d(f'start_game_for_player({player})')
         script_info = ScriptInfo()  # fresh!
         player.set_script(self.name, script_info)
 

@@ -277,6 +277,29 @@ async def debug_conf_call():
 
     return ""
 
+@app.route("/debug/start", methods=["POST"])
+async def debug_start_game():
+    req = TwilRequest(request)
+    await req.load()
+
+    # normalize format
+    num: str = PhoneNumber(req.data['number']).e164
+
+    info = None
+    if 'path' in req.data:
+        info = {_path: req.data['path']}
+
+    p = TelePlayer(num)
+
+    await p.load()
+
+    await telemarketopia.start_game_for_player(p, info)
+
+    await p.save()
+    # update shared state
+
+    return ""
+
 @app.route("/debug/reduce", methods=["POST", "GET"])
 async def trigger_reduce():
     await telemarketopia.integrate_shard(telemarketopia.state_manager.shard)

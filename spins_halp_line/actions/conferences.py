@@ -205,14 +205,19 @@ class TwilConference(Logger):
 
             if event_name == self.Event_Conference_Start: # conference start, mark time
                 self.started = datetime.now()
+                dirty = True
 
             if event_name == self.Event_Participant_Join:  # conference start, mark time
                 self._participating[participant] = self.Status_Active
+                dirty = True
 
             if event_name == self.Event_Participant_Leave:  # conference start, mark time
                 self._participating[participant] = self.Status_Left
+                dirty = True
 
-            dirty = dirty or await self.do_handle_event(event_name, participant)
+            handlers_made_changes = await self.do_handle_event(event_name, participant)
+            if handlers_made_changes:
+                dirty = True
 
             if dirty:
                 await self._save_conference_list(True)
@@ -229,6 +234,7 @@ class TwilConference(Logger):
 
     # Override this to do custom event handling
     async def do_handle_event(self, event, participant):
+        self.d(f'Calling custom Conference handlers for {event}!')
         for handler in self._custom_handlers:
             await handler.event(self, event, participant)
 

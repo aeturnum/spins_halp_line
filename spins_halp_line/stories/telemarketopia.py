@@ -142,6 +142,9 @@ class ConferenceEventHandler(Logger):
 
         return False
 
+    def __str__(self):
+        return f'ConferenceEventHandler'
+
 
 TwilConference._custom_handlers.append(ConferenceEventHandler())
 
@@ -283,9 +286,10 @@ class TeleStateManager(ScriptStateManager):
         return state
 
     async def player_added(self, player: TelePlayer, script_info: ScriptInfo, args: dict = None):
+        self.d(f'player_added({player})')
+
         if args is None:
             args = {}
-        self.d(f'player_added({player})')
         async with LockManager(self._lock):
 
             state: TeleState = self._state
