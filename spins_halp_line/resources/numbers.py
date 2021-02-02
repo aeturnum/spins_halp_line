@@ -46,6 +46,9 @@ class PhoneNumber:
     # todo: - find another JSON library that *does* have a standardized serialize call that it'll call on objects it doesn't know how to seralize
     # todo: - add code that checks to make sure we aren't adding non-basic objects to states (probably the hardest solution)
 
+    def __hash__(self):
+        return hash(self.e164)
+
     def toJson(self):
         return self.e164
 

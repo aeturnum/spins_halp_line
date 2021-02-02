@@ -324,7 +324,7 @@ async def reset_state():
 
     for p in await Player.get_all_players():
         await p.load()
-        result['players'][p.number] = p.data
+        result['players'][p.number.e164] = p.data
         if code == '2501':
             await p.reset(p)
 
