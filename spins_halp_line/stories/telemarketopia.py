@@ -130,10 +130,12 @@ class ConferenceEventHandler(Logger):
                 player_left = TelePlayer(participant)
                 await player_left.load()
                 self.d(f"Player {participant}({player_left.path}) left the first conference!")
+                msg = KPostConfOptions
                 if player_left.path == Path_Clavae:
-                    await send_text(CPostConfOptions, PhoneNumber(participant))
-                else:
-                    await send_text(KPostConfOptions, PhoneNumber(participant))
+                    msg = CPostConfOptions
+
+                self.d(f'Texting {msg} to {player_left}')
+                await send_text(msg, player_left.number)
 
                 player_left.was_sent_final_decision_text = True
 

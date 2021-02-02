@@ -105,6 +105,10 @@ class TwilConference(Logger):
         self.started: Optional[datetime] = started
 
     @property
+    def is_active(self) -> bool:
+        return len(self.active) > 1
+
+    @property
     def active(self) -> List[PhoneNumber]:
         return [PhoneNumber(p) for p, v in self._participating.items() if v == self.Status_Active]
 

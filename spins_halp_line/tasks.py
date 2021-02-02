@@ -48,7 +48,8 @@ add_task, _get_task = trio.open_memory_channel(50)
 async def Trio_Task_Task_Object_Runner():
     global _get_task
     # this is a work queue that fans out
-    async for task in _get_task:
-        async with trio.open_nursery() as nurse:
-            # print(f"got task: {task}")
+    # We need to open the nursery first otherwise only one task will execute at once
+    async with trio.open_nursery() as nurse:
+        async for task in _get_task:
+            print(f"got task: {task}")
             nurse.start_soon(task.do_an_execute, task)

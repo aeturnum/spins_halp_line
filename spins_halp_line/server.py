@@ -160,39 +160,39 @@ async def get_ending_response(endings: List[RSResource]):
 
 @app.route("/climax/1/1", methods=['GET', 'POST'])
 async def ending_11():
-    return get_ending_response([End_C, End_B])
+    return await get_ending_response([End_C, End_B])
 
 @app.route("/climax/1/2", methods=['GET', 'POST'])
 async def ending_12():
-    return get_ending_response([End_F, End_F, End_B])
+    return await get_ending_response([End_F, End_F, End_B])
 
 @app.route("/climax/1/3", methods=['GET', 'POST'])
 async def ending_13():
-    return get_ending_response([End_A, End_E, End_F])
+    return await get_ending_response([End_A, End_E, End_F])
 
 @app.route("/climax/2/1", methods=['GET', 'POST'])
 async def ending_21():
-    return get_ending_response([End_C, End_D])
+    return await get_ending_response([End_C, End_D])
 
 @app.route("/climax/2/2", methods=['GET', 'POST'])
 async def ending_22():
-    return get_ending_response([End_D, End_D, End_G])
+    return await get_ending_response([End_D, End_D, End_G])
 
 @app.route("/climax/2/3", methods=['GET', 'POST'])
 async def ending_23():
-    return get_ending_response([End_A, End_F, End_E, End_D])
+    return await get_ending_response([End_A, End_F, End_E, End_D])
 
 @app.route("/climax/3/1", methods=['GET', 'POST'])
 async def ending_31():
-    return get_ending_response([End_C, End_A])
+    return await get_ending_response([End_C, End_A])
 
 @app.route("/climax/3/2", methods=['GET', 'POST'])
 async def ending_32():
-    return get_ending_response([End_A, End_E, End_F])
+    return await get_ending_response([End_A, End_E, End_F])
 
 @app.route("/climax/3/3", methods=['GET', 'POST'])
 async def ending_33():
-    return get_ending_response([End_H])
+    return await get_ending_response([End_H])
 
 # final climax responses
 @app.route("/finalclimax/right", methods=['GET', 'POST'])

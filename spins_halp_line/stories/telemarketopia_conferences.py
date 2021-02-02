@@ -184,7 +184,7 @@ class ConnectFirstConference(ConferenceTask):
             return await add_task.send(ReturnPlayers(self.info))
 
         await trio.sleep(60 * 5)
-        if self.conference.active > 1:
+        if self.conference.is_active > 1:
             await self.conference.play_sound(Conference_Nudge)
 
 
