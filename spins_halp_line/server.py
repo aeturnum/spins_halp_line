@@ -167,7 +167,7 @@ async def ending_11():
 
 @app.route("/climax/1/2", methods=['GET', 'POST'])
 async def ending_12():
-    return await get_ending_response([End_F, End_F, End_B])
+    return await get_ending_response([End_F, End_E, End_B])
 
 @app.route("/climax/1/3", methods=['GET', 'POST'])
 async def ending_13():
@@ -179,7 +179,7 @@ async def ending_21():
 
 @app.route("/climax/2/2", methods=['GET', 'POST'])
 async def ending_22():
-    return await get_ending_response([End_D, End_D, End_G])
+    return await get_ending_response([End_F, End_D, End_G])
 
 @app.route("/climax/2/3", methods=['GET', 'POST'])
 async def ending_23():
