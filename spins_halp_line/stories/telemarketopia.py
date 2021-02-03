@@ -25,7 +25,7 @@ from spins_halp_line.util import Logger, LockManager
 from spins_halp_line.tasks import add_task
 from spins_halp_line.resources.numbers import PhoneNumber, Global_Number_Library
 from spins_halp_line.media.common import (
-    Puppet_Master, AI_Password, Look_At_You_Hacker
+    Puppet_Master, AI_Password, Look_At_You_Hacker, Database_Menu, Database_File_Corrupted
 )
 from .telemarketopia_conferences import ConfStartFirst, MakeClimaxCallsTask, SendFinalFinalResult, StoryInfo
 from ..actions.twilio import send_text
@@ -322,6 +322,9 @@ class TeleStateManager(ScriptStateManager):
             self.d(f'Assigning {player} to path {path}!')
             script_info.data[Key_path] = path
 
+            if 'state' in args:
+                script_info.state = args['state']
+
             await self.save_to_redis(True)
 
     def __str__(self):
@@ -531,9 +534,11 @@ class DatabaseAIThirdCall(TeleRoom):
 
 class DatabaseCorrupted(TeleRoom):
     Name = "Database File Corrupted"
-    Gather = False
 
+    async def get_audio_for_room(self, context: RoomContext):
+        return [Database_File_Corrupted, Database_Menu]
 
+# These are easter egg rooms
 class Ghost(TeleRoom):
     Name = 'Ghost'
 
@@ -587,8 +592,15 @@ class Database(PathScene):
         },
         DatabaseClassified(): {
             Path_Clavae: {
-                '1': [DatabaseCorrupted(), DatabaseMenu()],
-                '2': [DatabaseCorrupted(), DatabaseMenu()],
+                '1': DatabaseCorrupted(),
+                '2': DatabaseCorrupted(),
+                '*': DatabaseMenu()
+            }
+        },
+        DatabaseCorrupted(): {
+            Path_Clavae: {
+                '1': DatabaseCorrupted(),
+                '2': DatabaseCorrupted(),
                 '*': DatabaseMenu()
             }
         },

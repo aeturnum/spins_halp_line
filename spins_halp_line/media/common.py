@@ -18,7 +18,12 @@ Clavae_Final_Puzzle_Image_2 = RSResource(1090)
 Karen_Conference_Info = RSResource(1089)
 Clavae_Conference_Intro = RSResource(1074)
 
-# Easter Egg
+# Files we import explicitly to work around resourcespace / current artcitecture
+
+Database_Menu = RSResource(1068)
+Database_File_Corrupted = RSResource(1070)
+
+# Easter Eggs
 Puppet_Master = RSResource(1099)
 AI_Password = RSResource(1069)
 

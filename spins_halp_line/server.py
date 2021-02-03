@@ -43,6 +43,43 @@ from spins_halp_line.tasks import Trio_Task_Task_Object_Runner, GitUpdate, Task,
 from spins_halp_line.twil import t_resp, TwilRequest
 from spins_halp_line.util import do_monkey_patches, get_logger
 
+# todo: Notes on overall server structure:
+# todo:
+# todo: After getting this (mostly) working, I think there are a few structural
+# todo: changes I'd make to the architecture.
+# todo:
+# todo: First, I'd have the tasking system more thoroughly integrated with the
+# todo: rest of the structure of the server. Each task would be associated with
+# todo: a script / room / action / player / etc. They would get recorded in some
+# todo: ledger somewhere and could be audited. In general, storing logs in some
+# todo: structure that could be retrieved later seems like a good idea as well.
+# todo:
+# todo: I also think that, in hindsight, Rooms don't make much sense. We rarely
+# todo: have the room do anything complex and they actually complicate returning
+# todo: multiple audio files because the room creates and returns the twilio response.
+# todo: It would make more sense to keep the idea of 'Rooms' as a organizing principle,
+# todo: but make all their functions a function of the Scene. Scenes would also just
+# todo: have a sparse list of functions to call when a particular room is entered / left
+# todo: / whatever. That would also simplify the state management for when a player
+# todo: goes through a set of rooms (a 'tunnel'). The current system was designed
+# todo: without background on how twilio works, but because we need to return an
+# todo: arbitrary number of sound files / say commands before we reach the next 'gather,'
+# todo: it's actually somewhat complex to decide how many 'Rooms' to go through for
+# todo: a particular request.
+# todo:
+# todo: So I think a better model is to have a Script, which manages *all* of the
+# todo: shared state and which Scene is associated with what phone number, and then
+# todo: the various Scene objects, which change things for the player. For the
+# todo: class-driven version of this you would inherit from Script and Scene for a
+# todo: particular adventure. For a data-driven model, you'd pass a bunch of JSON
+# todo: (or whatever) to a subclass with faculties to interpret it.
+# todo:
+# todo: Generally, I think this is actually just a story graph navigator and that
+# todo: players are choosing which nodes to visit based on their states. I think
+# todo: there's a lot of potential for other 'views' into the story graph where
+# todo: players experience it as a MUD or a choose your own adventure book or
+# todo: whatever.
+
 Script.add_script(telemarketopia)
 
 do_monkey_patches()
@@ -304,9 +341,12 @@ async def debug_start_game():
     # normalize format
     num: str = PhoneNumber(req.data['number']).e164
 
-    info = None
+    info = {}
     if 'path' in req.data:
-        info = {Key_path: req.data['path']}
+        info[Key_path] = req.data['path']
+
+    if 'state' in req.data:
+        info['state'] = req.data['state']
 
     p = TelePlayer(num)
 
