@@ -69,7 +69,12 @@ class TeleRoom(Room):
         response = VoiceResponse()
 
         if self.Gather:
-            maybe_gather = Gather(num_digits=self.Gather_Digits, method="POST", action_on_empty_result=True)
+            maybe_gather = Gather(
+                num_digits=self.Gather_Digits,
+                method="POST",
+                action_on_empty_result=True,
+                timeout=10
+            )
             response.append(maybe_gather)
         else:
             maybe_gather = response
@@ -120,22 +125,22 @@ class PathScene(Scene):
         path_options = self.Choices.get(room)  # dictionary path choices
         if len(path_options.keys()) == 1:
             # We just are using '*'
-            room_choices = path_options.get(path,
-                                            path_options.get('*')
-                                            )
+            room_choices = path_options.get(path, path_options.get('*'))
         else:
             # This could throw an exception, which is fine
             room_choices = path_options[path]
 
-        self.d(f"_get_queue() choices: {room_choices}")
-        # todo: standardize digits as a string?
-        queue = None
+        self.d(f"_get_choice_for_request({number}) choices: {room_choices}")
+        queue = []
         if number in room_choices:
             queue = room_choices[number]
             self.d(f"Choice #{number}: {queue}")
         elif '*' in room_choices:  # default
             queue = room_choices['*']
             self.d(f"Choice *: {queue}")
+
+        if not isinstance(queue, list):
+            queue = [queue]
 
         return queue
 

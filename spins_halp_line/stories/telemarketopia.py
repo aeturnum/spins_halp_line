@@ -408,6 +408,7 @@ class TipLineScene(PathScene):
         TipLineRecruit(): {
             Path_Karen: {
                 '5': TipLineQuiz1()
+                # '*': TipLineRecruit()
             }
         },
         TipLineQuiz1(): {

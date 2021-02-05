@@ -193,8 +193,8 @@ class Snapshot(Logger):
         self.script_name: Optional[str] = None
         self.script_snap = None
         self.players: Dict[str, dict] = {}
-        self.index = str(self._num)
-        self._num += 1
+        self.index = str(Snapshot._num)
+        Snapshot._num += 1
 
         self._from_objects(script, players)
 
@@ -618,26 +618,29 @@ class Scene(Logger):
         queue = []
         # need to turn the previous room into a room object:
         prev_room = self._name_to_room(our_info.prev_room)
-        self.d(f"_get_queue() previous room: {prev_room}")
+        number = str(request.digits)
+        self.d(f"_get_queue() {number=} previous room: {prev_room}")
         if self.choices_for_room(prev_room) is not None:
-            number = str(request.digits)
             queue = self._get_choice_for_request(number, prev_room, script_state)
 
         # todo: add a default option that tells the user we didn't understand their choice and
         # todo: replays the previous room
         return self._item_to_room_name_list(queue)
 
-    def _get_choice_for_request(self, number: str, room: Room, script_state: ScriptInfo):
+    def _get_choice_for_request(self, number: str, room: Room, script_state: ScriptInfo) -> List[Optional[Room]]:
         room_choices = self.Choices.get(room)  # dictionary of choice to room
-        self.d(f"_get_queue() choices: {room_choices}")
+        self.d(f"_get_choice_for_request({number}) choices: {room_choices}")
         # todo: standardize digits as a string?
-        queue = None
+        queue = []
         if number in room_choices:
             queue = room_choices[number]
             self.d(f"Choice #{number}: {queue}")
         elif '*' in room_choices:  # default
             queue = room_choices['*']
             self.d(f"Choice *: {queue}")
+
+        if not isinstance(queue, list):
+            queue = [queue]
 
         return queue
 
@@ -647,8 +650,19 @@ class Scene(Logger):
         if not isinstance(obj, list):
             obj = [obj]
 
+        result = []
+        warn = False
+        for item in obj:
+            if isinstance(item, Room):
+                result.append(item.Name)
+            else:
+                warn = True
+                result.append(item)
+
+        if warn:
+            print(f'Warning Flag: _item_to_room_name_list({obj})')
         # transform to strings for serializing
-        return [item.Name if isinstance(item, Room) else item for item in obj]
+        return result
 
     def __str__(self):
         return f'Scene[{self.Name}]'
