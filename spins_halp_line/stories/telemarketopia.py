@@ -528,7 +528,7 @@ class DatabaseAIThirdCall(TeleRoom):
     Gather = False
 
     async def get_audio_for_room(self, context: RoomContext):
-        context.shard.append('clave_waiting_for_conf', context.player.number.e164)
+        context.shard.append('clavae_waiting_for_conf', context.player.number.e164)
         await send_text(ConfWait, context.player.number)
         return await self.get_resource_for_path(context)
 
